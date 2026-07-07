@@ -1,80 +1,107 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="th">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>CaneNext | Online Signature System</title>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>CaneNext : Online Signature System</title>
   <link rel="stylesheet" href="style.css" />
   <script src="https://accounts.google.com/gsi/client" async defer></script>
+  <script src="https://apis.google.com/js/api.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
-  <script src="https://cdn.jsdelivr.net/npm/pdf-lib@1.17.1/dist/pdf-lib.min.js"></script>
-  <script src="https://cdn.jsdelivr.net/npm/signature_pad@4.1.6/dist/signature_pad.umd.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf-lib/1.17.1/pdf-lib.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/signature_pad@4.1.7/dist/signature_pad.umd.min.js"></script>
+  <script src="config.js"></script>
 </head>
 <body>
   <header class="app-header">
     <div>
       <h1>CaneNext</h1>
-      <h2>Online Signature System</h2>
+      <div class="subtitle">Online Signature System</div>
     </div>
-    <div class="auth-actions">
-      <button id="loginBtn" class="primary-btn">เข้าสู่ระบบ</button>
-      <button id="logoutBtn" class="secondary-btn" disabled>ออกจากระบบ</button>
+    <div class="auth-area">
+      <span id="userStatus" class="user-status">ยังไม่ได้เข้าสู่ระบบ</span>
+      <button id="loginBtn" class="btn primary">เข้าสู่ระบบ</button>
+      <button id="logoutBtn" class="btn ghost hidden">ออกจากระบบ</button>
     </div>
   </header>
 
+  <nav class="tabs">
+    <button class="tab active" data-page="documents">เอกสาร PDF</button>
+    <button class="tab" data-page="summary">สรุปสถานะเอกสาร</button>
+  </nav>
+
   <main class="layout">
-    <aside class="sidebar">
-      <button id="loadPdfBtn" class="menu-btn" disabled>ดึงไฟล์ PDF</button>
-      <div id="status" class="status">กรุณาเข้าสู่ระบบ Google</div>
-      <section class="summary-panel" aria-label="สรุปสถานะเอกสาร">
-        <div class="summary-title">สรุปสถานะเอกสาร</div>
-        <div class="summary-grid">
-          <div class="summary-card">
-            <span class="summary-label">ไฟล์ต้นฉบับ</span>
-            <strong id="totalOriginalCount">0</strong>
-          </div>
-          <div class="summary-card signed">
-            <span class="summary-label">เซ็นแล้ว</span>
-            <strong id="signedCount">0</strong>
-          </div>
-          <div class="summary-card pending">
-            <span class="summary-label">คงเหลือ</span>
-            <strong id="pendingCount">0</strong>
-          </div>
-        </div>
-      </section>
-
-      <div class="filter-tabs" role="tablist" aria-label="กรองสถานะเอกสาร">
-        <button id="filterAllBtn" class="filter-tab active" disabled>ทั้งหมด</button>
-        <button id="filterSignedBtn" class="filter-tab" disabled>เซ็นแล้ว</button>
-        <button id="filterPendingBtn" class="filter-tab" disabled>ยังไม่เซ็น</button>
+    <section id="documentsPage" class="page active">
+      <div class="panel toolbar">
+        <button id="loadFilesBtn" class="btn primary">ดึงไฟล์ PDF</button>
+        <input id="searchInput" type="search" placeholder="ค้นหาชื่อไฟล์ PDF" />
+        <button id="clearSearchBtn" class="btn ghost" type="button">ล้างการค้นหา</button>
+        <select id="statusFilter">
+          <option value="all">ทั้งหมด</option>
+          <option value="unsigned">ยังไม่เซ็น</option>
+          <option value="signed">เซ็นแล้ว</option>
+        </select>
       </div>
 
-      <input id="fileSearchInput" class="file-search" type="search" placeholder="ค้นหาชื่อไฟล์ PDF..." disabled />
-      <div id="fileList" class="file-list"></div>
-    </aside>
+      <div class="content-grid">
+        <aside class="panel file-panel">
+          <h2>รายการเอกสาร</h2>
+          <div id="fileList" class="file-list empty">กรุณาเข้าสู่ระบบ แล้วกดดึงไฟล์ PDF</div>
+        </aside>
 
-    <section class="workspace">
-      <div class="toolbar">
-        <button id="prevPageBtn" disabled>หน้าก่อนหน้า</button>
-        <span id="pageInfo">หน้า - / -</span>
-        <button id="nextPageBtn" disabled>หน้าถัดไป</button>
-        <button id="clearSignatureBtn" disabled>ล้างลายเซ็น</button>
-        <button id="savePdfBtn" class="primary-btn" disabled>บันทึก PDF</button>
+        <section class="panel viewer-panel">
+          <div class="viewer-top">
+            <div>
+              <h2 id="currentFileName">ยังไม่ได้เลือกไฟล์</h2>
+              <span id="docStatus" class="badge muted">-</span>
+            </div>
+            <div class="page-control">
+              <button id="prevPageBtn" class="btn small">ก่อนหน้า</button>
+              <span id="pageInfo">หน้า - / -</span>
+              <button id="nextPageBtn" class="btn small">ถัดไป</button>
+            </div>
+          </div>
+
+          <div id="pdfWrap" class="pdf-wrap">
+            <canvas id="pdfCanvas"></canvas>
+          </div>
+
+          <div class="sign-section">
+            <h3>ลายเซ็น</h3>
+            <canvas id="signatureCanvas"></canvas>
+            <div class="sign-options">
+              <label>บันทึกที่หน้า
+                <input id="signPageInput" type="number" min="1" value="1" />
+              </label>
+              <label>ตำแหน่ง
+                <select id="signaturePosition">
+                  <option value="bottom-right">ล่างขวา</option>
+                  <option value="bottom-left">ล่างซ้าย</option>
+                  <option value="center">กลางหน้า</option>
+                </select>
+              </label>
+              <button id="clearSigBtn" class="btn ghost">ล้างลายเซ็น</button>
+              <button id="saveSignedBtn" class="btn success">บันทึกลายเซ็นลง PDF</button>
+            </div>
+          </div>
+        </section>
       </div>
+    </section>
 
-      <div class="pdf-wrap">
-        <canvas id="pdfCanvas"></canvas>
+    <section id="summaryPage" class="page">
+      <div class="summary-cards">
+        <div class="summary-card"><div>ไฟล์ต้นฉบับทั้งหมด</div><strong id="totalCount">0</strong></div>
+        <div class="summary-card"><div>เซ็นแล้ว</div><strong id="signedCount">0</strong></div>
+        <div class="summary-card"><div>คงเหลือ</div><strong id="unsignedCount">0</strong></div>
       </div>
-
-      <section class="signature-section">
-        <div class="signature-title">พื้นที่เซ็นชื่อ</div>
-        <canvas id="signatureCanvas"></canvas>
-      </section>
+      <div class="panel">
+        <h2>รายการที่ยังไม่เซ็น</h2>
+        <div id="unsignedList" class="file-list empty">ยังไม่มีข้อมูล</div>
+      </div>
     </section>
   </main>
 
-  <script src="config.js"></script>
+  <div id="toast" class="toast hidden"></div>
   <script src="app.js"></script>
 </body>
 </html>

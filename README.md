@@ -1,44 +1,21 @@
 # CaneNext : Online Signature System
 
-ระบบเว็บสำหรับดึง PDF จาก Google Drive, เซ็นผ่านแท็บเล็ต และบันทึกไฟล์ PDF ที่มีลายเซ็นกลับเข้า Google Drive
+เว็บสำหรับดึง PDF จาก Google Drive Folder กลาง เปิดอ่าน เซ็นผ่านแท็บเล็ต และบันทึกกลับเป็นไฟล์ `_signed.pdf`
 
-## ไฟล์หลัก
-
-- `index.html` หน้าเว็บหลัก
-- `style.css` รูปแบบหน้าเว็บ
-- `app.js` ระบบ Login, ดึง PDF, เซ็น, บันทึก PDF
-- `config.js` Google Client ID และ Folder ID
-
-## การใช้งานบน GitHub Pages
-
-1. Upload ไฟล์ทั้งหมดขึ้น GitHub Repository
-2. ไปที่ Settings > Pages
-3. เลือก Deploy from branch
-4. Branch: main
-5. Folder: /(root)
-6. Save
+## ไฟล์สำคัญ
+- `index.html`
+- `style.css`
+- `app.js`
+- `config.js`
 
 ## Google Cloud ที่ต้องตั้งค่า
+1. Enable Google Drive API
+2. OAuth Client ID แบบ Web Application
+3. Authorized JavaScript origins: `https://maccanedigital.github.io` หรือโดเมน GitHub Pages ของคุณ
+4. OAuth Consent Screen เพิ่ม Test Users หรือ Publish App
+5. โฟลเดอร์ Drive ต้องแชร์ให้บัญชีผู้ใช้งานมีสิทธิ์ดู/แก้ไข
 
-Authorized JavaScript origins:
+## Scope ที่ใช้
+`https://www.googleapis.com/auth/drive`
 
-```text
-https://besttagoon.github.io
-```
-
-Scope ที่ใช้:
-
-```text
-https://www.googleapis.com/auth/drive.file
-https://www.googleapis.com/auth/drive.readonly
-```
-
-Folder ID:
-
-```text
-1y5vd_tFnhfzjDfDo3Idq6nkqhlPRPE6p
-```
-
-## หมายเหตุ
-
-ระบบจะบันทึกไฟล์ใหม่เป็น `_signed.pdf` เพื่อไม่เขียนทับไฟล์ต้นฉบับ
+ใช้ scope นี้เพื่ออ่าน PDF ในโฟลเดอร์กลางและอัปโหลดไฟล์ PDF ที่เซ็นแล้วกลับเข้าโฟลเดอร์เดิม

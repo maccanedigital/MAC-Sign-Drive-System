@@ -1,379 +1,273 @@
+/* CaneNext : Online Signature System - Google Drive API production version */
 pdfjsLib.GlobalWorkerOptions.workerSrc = "https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js";
 
 let tokenClient;
 let accessToken = null;
-let currentPdfBlob = null;
-let currentPdfName = "";
-let currentPdfId = "";
-let pdfDocument = null;
-let currentPage = 1;
-let totalPages = 0;
-let signaturePad;
+let gapiReady = false;
+let gisReady = false;
 let pdfFiles = [];
-let documentStatus = new Map();
-let activeFilter = "all";
+let currentFile = null;
+let currentPdfBytes = null;
+let pdfDoc = null;
+let pageNum = 1;
+let pageCount = 0;
+let signaturePad;
 
+const $ = (id) => document.getElementById(id);
 const els = {
-  loginBtn: document.getElementById("loginBtn"),
-  logoutBtn: document.getElementById("logoutBtn"),
-  loadPdfBtn: document.getElementById("loadPdfBtn"),
-  status: document.getElementById("status"),
-  fileList: document.getElementById("fileList"),
-  fileSearchInput: document.getElementById("fileSearchInput"),
-  filterAllBtn: document.getElementById("filterAllBtn"),
-  filterSignedBtn: document.getElementById("filterSignedBtn"),
-  filterPendingBtn: document.getElementById("filterPendingBtn"),
-  totalOriginalCount: document.getElementById("totalOriginalCount"),
-  signedCount: document.getElementById("signedCount"),
-  pendingCount: document.getElementById("pendingCount"),
-  pdfCanvas: document.getElementById("pdfCanvas"),
-  signatureCanvas: document.getElementById("signatureCanvas"),
-  prevPageBtn: document.getElementById("prevPageBtn"),
-  nextPageBtn: document.getElementById("nextPageBtn"),
-  pageInfo: document.getElementById("pageInfo"),
-  clearSignatureBtn: document.getElementById("clearSignatureBtn"),
-  savePdfBtn: document.getElementById("savePdfBtn")
+  loginBtn: $("loginBtn"), logoutBtn: $("logoutBtn"), userStatus: $("userStatus"),
+  loadFilesBtn: $("loadFilesBtn"), searchInput: $("searchInput"), clearSearchBtn: $("clearSearchBtn"), statusFilter: $("statusFilter"),
+  fileList: $("fileList"), currentFileName: $("currentFileName"), docStatus: $("docStatus"),
+  pdfCanvas: $("pdfCanvas"), signatureCanvas: $("signatureCanvas"), prevPageBtn: $("prevPageBtn"),
+  nextPageBtn: $("nextPageBtn"), pageInfo: $("pageInfo"), signPageInput: $("signPageInput"),
+  signaturePosition: $("signaturePosition"), clearSigBtn: $("clearSigBtn"), saveSignedBtn: $("saveSignedBtn"),
+  totalCount: $("totalCount"), signedCount: $("signedCount"), unsignedCount: $("unsignedCount"), unsignedList: $("unsignedList"), toast: $("toast")
 };
 
 window.addEventListener("load", () => {
+  initSignaturePad();
+  bindEvents();
+  loadGapi();
+  waitForGIS();
+  setButtons(false);
+});
+
+function bindEvents(){
+  els.loginBtn.addEventListener("click", login);
+  els.logoutBtn.addEventListener("click", logout);
+  els.loadFilesBtn.addEventListener("click", loadFiles);
+  els.searchInput.addEventListener("input", renderFiles);
+  els.clearSearchBtn.addEventListener("click", clearSearch);
+  els.statusFilter.addEventListener("change", renderFiles);
+  els.prevPageBtn.addEventListener("click", () => changePage(-1));
+  els.nextPageBtn.addEventListener("click", () => changePage(1));
+  els.clearSigBtn.addEventListener("click", () => signaturePad.clear());
+  els.saveSignedBtn.addEventListener("click", saveSignedPdf);
+  document.querySelectorAll(".tab").forEach(btn => btn.addEventListener("click", () => switchPage(btn.dataset.page)));
+  window.addEventListener("resize", resizeSignatureCanvas);
+}
+
+function switchPage(page){
+  document.querySelectorAll(".tab").forEach(t => t.classList.toggle("active", t.dataset.page === page));
+  $("documentsPage").classList.toggle("active", page === "documents");
+  $("summaryPage").classList.toggle("active", page === "summary");
+  updateSummary();
+}
+
+function toast(msg){
+  els.toast.textContent = msg; els.toast.classList.remove("hidden");
+  setTimeout(()=>els.toast.classList.add("hidden"), 3200);
+}
+
+function initSignaturePad(){
+  signaturePad = new SignaturePad(els.signatureCanvas, { minWidth: 1.2, maxWidth: 3.2 });
   resizeSignatureCanvas();
-  signaturePad = new SignaturePad(els.signatureCanvas, {
-    backgroundColor: "rgba(255,255,255,0)",
-    penColor: "rgb(0, 0, 0)"
-  });
-
-  tokenClient = google.accounts.oauth2.initTokenClient({
-    client_id: CONFIG.CLIENT_ID,
-    scope: CONFIG.SCOPES,
-    callback: (response) => {
-      if (response.error) {
-        setStatus("เข้าสู่ระบบไม่สำเร็จ");
-        return;
-      }
-      accessToken = response.access_token;
-      setLoggedInState();
-      setStatus("เข้าสู่ระบบสำเร็จ พร้อมดึงไฟล์ PDF จาก Google Drive");
-    }
-  });
-});
-
-window.addEventListener("resize", resizeSignatureCanvas);
-
-els.loginBtn.addEventListener("click", () => {
-  tokenClient.requestAccessToken({ prompt: accessToken ? "" : "consent" });
-});
-els.logoutBtn.addEventListener("click", logout);
-
-els.loadPdfBtn.addEventListener("click", loadPdfFiles);
-els.fileSearchInput.addEventListener("input", renderFileList);
-els.filterAllBtn.addEventListener("click", () => setFilter("all"));
-els.filterSignedBtn.addEventListener("click", () => setFilter("signed"));
-els.filterPendingBtn.addEventListener("click", () => setFilter("pending"));
-els.prevPageBtn.addEventListener("click", () => changePage(-1));
-els.nextPageBtn.addEventListener("click", () => changePage(1));
-els.clearSignatureBtn.addEventListener("click", () => signaturePad.clear());
-els.savePdfBtn.addEventListener("click", saveSignedPdf);
-
-function setStatus(message) {
-  els.status.textContent = message;
 }
-
-function setLoggedInState() {
-  els.loginBtn.textContent = "เข้าสู่ระบบแล้ว";
-  els.loginBtn.disabled = true;
-  els.logoutBtn.disabled = false;
-  els.loadPdfBtn.disabled = false;
-}
-
-function setLoggedOutState() {
-  accessToken = null;
-  currentPdfBlob = null;
-  currentPdfName = "";
-  currentPdfId = "";
-  pdfDocument = null;
-  currentPage = 1;
-  totalPages = 0;
-  pdfFiles = [];
-  documentStatus = new Map();
-  activeFilter = "all";
-
-  els.loginBtn.textContent = "เข้าสู่ระบบ";
-  els.loginBtn.disabled = false;
-  els.logoutBtn.disabled = true;
-  els.loadPdfBtn.disabled = true;
-  els.fileSearchInput.disabled = true;
-  els.fileSearchInput.value = "";
-  els.fileList.innerHTML = "";
-  setSummaryCounts(0, 0, 0);
-  setFilterButtonsDisabled(true);
-  setFilter("all", false);
-  els.prevPageBtn.disabled = true;
-  els.nextPageBtn.disabled = true;
-  els.clearSignatureBtn.disabled = true;
-  els.savePdfBtn.disabled = true;
-  els.pageInfo.textContent = "หน้า - / -";
-
-  const pdfCtx = els.pdfCanvas.getContext("2d");
-  pdfCtx.clearRect(0, 0, els.pdfCanvas.width, els.pdfCanvas.height);
-  if (signaturePad) signaturePad.clear();
-}
-
-function logout() {
-  if (accessToken && google?.accounts?.oauth2?.revoke) {
-    google.accounts.oauth2.revoke(accessToken, () => {});
-  }
-  setLoggedOutState();
-  setStatus("ออกจากระบบแล้ว");
-}
-
-function resizeSignatureCanvas() {
+function resizeSignatureCanvas(){
   const ratio = Math.max(window.devicePixelRatio || 1, 1);
   const canvas = els.signatureCanvas;
-  const rect = canvas.getBoundingClientRect();
-  canvas.width = rect.width * ratio;
-  canvas.height = rect.height * ratio;
-  const ctx = canvas.getContext("2d");
-  ctx.scale(ratio, ratio);
-  if (signaturePad) signaturePad.clear();
+  const data = signaturePad && !signaturePad.isEmpty() ? signaturePad.toData() : null;
+  canvas.width = canvas.offsetWidth * ratio;
+  canvas.height = canvas.offsetHeight * ratio;
+  canvas.getContext("2d").scale(ratio, ratio);
+  if(signaturePad){ signaturePad.clear(); if(data) signaturePad.fromData(data); }
 }
 
-async function loadPdfFiles() {
-  setStatus("กำลังดึงรายการ PDF...");
-  els.fileList.innerHTML = "";
-  const query = encodeURIComponent(`'${CONFIG.FOLDER_ID}' in parents and mimeType='application/pdf' and trashed=false`);
-  const fields = encodeURIComponent("files(id,name,modifiedTime,size)");
-  const url = `https://www.googleapis.com/drive/v3/files?q=${query}&fields=${fields}&orderBy=modifiedTime desc`;
-
-  const res = await fetch(url, { headers: { Authorization: `Bearer ${accessToken}` } });
-  if (!res.ok) {
-    setStatus("ดึงไฟล์ไม่สำเร็จ ตรวจสอบสิทธิ์ Folder หรือ OAuth Scope");
-    return;
-  }
-
-  const data = await res.json();
-  if (!data.files || data.files.length === 0) {
-    setStatus("ไม่พบไฟล์ PDF ในโฟลเดอร์นี้");
-    return;
-  }
-
-  pdfFiles = data.files;
-  buildDocumentStatus();
-  els.fileSearchInput.disabled = false;
-  setFilterButtonsDisabled(false);
-  els.fileSearchInput.value = "";
-  setFilter("all");
-}
-
-function normalizeBaseName(fileName) {
-  return fileName.replace(/_signed\.pdf$/i, "").replace(/\.pdf$/i, "").trim().toLowerCase();
-}
-
-function isSignedFile(fileName) {
-  return /_signed\.pdf$/i.test(fileName);
-}
-
-function buildDocumentStatus() {
-  const signedBases = new Set(
-    pdfFiles.filter((file) => isSignedFile(file.name)).map((file) => normalizeBaseName(file.name))
-  );
-  const originalFiles = pdfFiles.filter((file) => !isSignedFile(file.name));
-
-  documentStatus = new Map();
-  originalFiles.forEach((file) => {
-    documentStatus.set(file.id, {
-      isOriginal: true,
-      isSigned: signedBases.has(normalizeBaseName(file.name))
-    });
-  });
-
-  const signedCount = originalFiles.filter((file) => documentStatus.get(file.id)?.isSigned).length;
-  const pendingCount = Math.max(originalFiles.length - signedCount, 0);
-  setSummaryCounts(originalFiles.length, signedCount, pendingCount);
-}
-
-function setSummaryCounts(total, signed, pending) {
-  els.totalOriginalCount.textContent = total.toLocaleString("th-TH");
-  els.signedCount.textContent = signed.toLocaleString("th-TH");
-  els.pendingCount.textContent = pending.toLocaleString("th-TH");
-}
-
-function setFilterButtonsDisabled(disabled) {
-  [els.filterAllBtn, els.filterSignedBtn, els.filterPendingBtn].forEach((btn) => {
-    btn.disabled = disabled;
+function loadGapi(){
+  gapi.load("client", async () => {
+    await gapi.client.init({ discoveryDocs: [CONFIG.DISCOVERY_DOC] });
+    gapiReady = true;
+    setButtons(false);
   });
 }
-
-function setFilter(filter, shouldRender = true) {
-  activeFilter = filter;
-  const buttons = { all: els.filterAllBtn, signed: els.filterSignedBtn, pending: els.filterPendingBtn };
-  Object.entries(buttons).forEach(([key, btn]) => btn.classList.toggle("active", key === filter));
-  if (shouldRender) renderFileList();
+function waitForGIS(){
+  const timer = setInterval(() => {
+    if(window.google && google.accounts && google.accounts.oauth2){
+      clearInterval(timer);
+      tokenClient = google.accounts.oauth2.initTokenClient({
+        client_id: CONFIG.CLIENT_ID,
+        scope: CONFIG.SCOPES,
+        callback: (tokenResponse) => {
+          if(tokenResponse && tokenResponse.access_token){
+            accessToken = tokenResponse.access_token;
+            gapi.client.setToken({ access_token: accessToken });
+            els.userStatus.textContent = "เข้าสู่ระบบแล้ว";
+            els.loginBtn.classList.add("hidden");
+            els.logoutBtn.classList.remove("hidden");
+            setButtons(true);
+            toast("เข้าสู่ระบบสำเร็จ");
+            loadFiles();
+          }
+        }
+      });
+      gisReady = true;
+      setButtons(false);
+    }
+  }, 200);
+}
+function setButtons(isLoggedIn){
+  els.loginBtn.disabled = !(gapiReady && gisReady) || isLoggedIn;
+  els.loadFilesBtn.disabled = !isLoggedIn;
+  els.saveSignedBtn.disabled = !isLoggedIn || !currentFile;
+}
+function login(){
+  if(!tokenClient){ toast("Google API ยังโหลดไม่เสร็จ"); return; }
+  tokenClient.requestAccessToken({ prompt: "consent" });
+}
+function logout(){
+  if(accessToken) google.accounts.oauth2.revoke(accessToken);
+  accessToken = null; gapi.client.setToken(null);
+  pdfFiles = []; currentFile = null; currentPdfBytes = null; pdfDoc = null;
+  els.userStatus.textContent = "ออกจากระบบแล้ว";
+  els.loginBtn.classList.remove("hidden"); els.logoutBtn.classList.add("hidden");
+  setButtons(false); renderFiles(); updateSummary(); clearViewer(); toast("ออกจากระบบแล้ว");
 }
 
-function renderFileList() {
-  const keyword = (els.fileSearchInput.value || "").trim().toLowerCase();
-  const originalFiles = pdfFiles.filter((file) => !isSignedFile(file.name));
-  const filteredFiles = originalFiles.filter((file) => {
-    const status = documentStatus.get(file.id);
-    const matchKeyword = file.name.toLowerCase().includes(keyword);
-    const matchFilter =
-      activeFilter === "all" ||
-      (activeFilter === "signed" && status?.isSigned) ||
-      (activeFilter === "pending" && !status?.isSigned);
-    return matchKeyword && matchFilter;
+async function loadFiles(){
+  if(!accessToken){ toast("กรุณาเข้าสู่ระบบก่อน"); return; }
+  els.fileList.textContent = "กำลังดึงไฟล์...";
+  try{
+    let all = []; let pageToken;
+    do{
+      const res = await gapi.client.drive.files.list({
+        q: `'${CONFIG.FOLDER_ID}' in parents and mimeType='application/pdf' and trashed=false`,
+        fields: "nextPageToken, files(id,name,mimeType,modifiedTime,size,webViewLink)",
+        orderBy: "modifiedTime desc",
+        pageSize: 100,
+        pageToken,
+        supportsAllDrives: true,
+        includeItemsFromAllDrives: true
+      });
+      all = all.concat(res.result.files || []);
+      pageToken = res.result.nextPageToken;
+    }while(pageToken);
+    pdfFiles = mapStatus(all);
+    renderFiles(); updateSummary();
+    toast(`ดึงไฟล์ PDF สำเร็จ ${pdfFiles.length} ไฟล์`);
+  }catch(err){
+    console.error(err);
+    els.fileList.innerHTML = `<div class="empty">ดึงไฟล์ไม่ได้: ${escapeHtml(err?.result?.error?.message || err.message || 'ไม่ทราบสาเหตุ')}</div>`;
+    toast("ดึงไฟล์ไม่ได้ กรุณาตรวจ Drive API / สิทธิ์โฟลเดอร์");
+  }
+}
+
+function mapStatus(files){
+  const signedBase = new Set(files.filter(f=>/_signed\.pdf$/i.test(f.name)).map(f=>f.name.replace(/_signed\.pdf$/i,".pdf").toLowerCase()));
+  return files.map(f => {
+    const isSignedFile = /_signed\.pdf$/i.test(f.name);
+    const hasSignedCopy = signedBase.has(f.name.toLowerCase());
+    return {...f, isSignedFile, hasSignedCopy, status: isSignedFile || hasSignedCopy ? "signed" : "unsigned"};
   });
+}
+function getOriginalFiles(){ return pdfFiles.filter(f=>!f.isSignedFile); }
+function clearSearch(){
+  els.searchInput.value = "";
+  els.statusFilter.value = "all";
+  renderFiles();
+  toast("ล้างการค้นหาแล้ว");
+}
 
-  els.fileList.innerHTML = "";
-
-  if (filteredFiles.length === 0) {
-    const empty = document.createElement("div");
-    empty.className = "empty-result";
-    empty.textContent = "ไม่พบไฟล์ PDF ตามเงื่อนไขที่เลือก";
-    els.fileList.appendChild(empty);
-    setStatus(keyword ? `ไม่พบไฟล์ที่มีคำว่า “${els.fileSearchInput.value}”` : "ไม่พบไฟล์ PDF");
-    return;
-  }
-
-  filteredFiles.forEach((file) => {
-    const btn = document.createElement("button");
-    btn.className = "file-item";
-    if (file.id === currentPdfId) btn.classList.add("active");
-    const status = documentStatus.get(file.id);
-    btn.innerHTML = `<span>${file.name}</span><small class="file-status ${status?.isSigned ? "is-signed" : "is-pending"}">${status?.isSigned ? "เซ็นแล้ว" : "ยังไม่เซ็น"}</small>`;
-    btn.onclick = () => openPdf(file, btn);
-    els.fileList.appendChild(btn);
+function filteredFiles(){
+  const q = els.searchInput.value.trim().toLowerCase();
+  const status = els.statusFilter.value;
+  return pdfFiles.filter(f => (!q || f.name.toLowerCase().includes(q)) && (status === "all" || f.status === status));
+}
+function renderFiles(){
+  const files = filteredFiles();
+  if(!files.length){ els.fileList.className="file-list empty"; els.fileList.textContent="ไม่พบไฟล์ PDF"; return; }
+  els.fileList.className="file-list"; els.fileList.innerHTML = "";
+  files.forEach(f => {
+    const item = document.createElement("div");
+    item.className = "file-item" + (currentFile?.id === f.id ? " active" : "");
+    item.innerHTML = `<div class="file-name">${escapeHtml(f.name)}</div><div class="file-meta"><span class="badge ${f.status}">${f.status === 'signed' ? 'เซ็นแล้ว' : 'ยังไม่เซ็น'}</span><span>${formatDate(f.modifiedTime)}</span></div>`;
+    item.addEventListener("click", () => openFile(f));
+    els.fileList.appendChild(item);
   });
-
-  const filterText = activeFilter === "signed" ? "เซ็นแล้ว" : activeFilter === "pending" ? "ยังไม่เซ็น" : "ทั้งหมด";
-  setStatus(keyword ? `พบไฟล์ ${filterText} ที่ตรงกับการค้นหา ${filteredFiles.length} ไฟล์` : `แสดงรายการ ${filterText} ${filteredFiles.length} ไฟล์`);
 }
-
-async function openPdf(file, button) {
-  document.querySelectorAll(".file-item").forEach((el) => el.classList.remove("active"));
-  button.classList.add("active");
-  setStatus(`กำลังเปิด ${file.name}`);
-
-  const url = `https://www.googleapis.com/drive/v3/files/${file.id}?alt=media`;
-  const res = await fetch(url, { headers: { Authorization: `Bearer ${accessToken}` } });
-  if (!res.ok) {
-    setStatus("เปิด PDF ไม่สำเร็จ");
-    return;
-  }
-
-  currentPdfBlob = await res.blob();
-  currentPdfName = file.name;
-  currentPdfId = file.id;
-  const arrayBuffer = await currentPdfBlob.arrayBuffer();
-  pdfDocument = await pdfjsLib.getDocument({ data: arrayBuffer.slice(0) }).promise;
-  currentPage = 1;
-  totalPages = pdfDocument.numPages;
-  await renderPage(currentPage);
-
-  els.prevPageBtn.disabled = false;
-  els.nextPageBtn.disabled = false;
-  els.clearSignatureBtn.disabled = false;
-  els.savePdfBtn.disabled = false;
-  updatePageInfo();
-  setStatus(`เปิดไฟล์ ${file.name} เรียบร้อย`);
+function updateSummary(){
+  const originals = getOriginalFiles();
+  const signed = originals.filter(f=>f.hasSignedCopy).length;
+  const unsigned = originals.length - signed;
+  els.totalCount.textContent = originals.length;
+  els.signedCount.textContent = signed;
+  els.unsignedCount.textContent = unsigned;
+  const list = originals.filter(f=>!f.hasSignedCopy);
+  if(!list.length){ els.unsignedList.className="file-list empty"; els.unsignedList.textContent="ไม่มีไฟล์คงเหลือ"; return; }
+  els.unsignedList.className="file-list"; els.unsignedList.innerHTML = list.map(f=>`<div class="file-item"><div class="file-name">${escapeHtml(f.name)}</div><div class="file-meta"><span class="badge unsigned">ยังไม่เซ็น</span></div></div>`).join("");
 }
-
-async function renderPage(pageNumber) {
-  const page = await pdfDocument.getPage(pageNumber);
-  const viewport = page.getViewport({ scale: 1.45 });
-  const canvas = els.pdfCanvas;
-  const context = canvas.getContext("2d");
-  canvas.width = viewport.width;
-  canvas.height = viewport.height;
-  await page.render({ canvasContext: context, viewport }).promise;
+async function openFile(file){
+  currentFile = file; setButtons(true); renderFiles();
+  els.currentFileName.textContent = file.name;
+  els.docStatus.className = `badge ${file.status}`;
+  els.docStatus.textContent = file.status === "signed" ? "เซ็นแล้ว" : "ยังไม่เซ็น";
+  try{
+    toast("กำลังเปิด PDF...");
+    const res = await fetch(`https://www.googleapis.com/drive/v3/files/${file.id}?alt=media&supportsAllDrives=true`, { headers: { Authorization: `Bearer ${accessToken}` }});
+    if(!res.ok) throw new Error(await res.text());
+    currentPdfBytes = await res.arrayBuffer();
+    pdfDoc = await pdfjsLib.getDocument({ data: currentPdfBytes.slice(0) }).promise;
+    pageCount = pdfDoc.numPages; pageNum = 1; els.signPageInput.max = pageCount; els.signPageInput.value = 1;
+    await renderPage(); toast("เปิด PDF สำเร็จ");
+  }catch(err){ console.error(err); toast("เปิด PDF ไม่ได้"); }
 }
-
-async function changePage(delta) {
-  if (!pdfDocument) return;
-  const nextPage = currentPage + delta;
-  if (nextPage < 1 || nextPage > totalPages) return;
-  currentPage = nextPage;
-  await renderPage(currentPage);
-  updatePageInfo();
+async function renderPage(){
+  if(!pdfDoc) return;
+  const page = await pdfDoc.getPage(pageNum);
+  const viewport = page.getViewport({ scale: 1.35 });
+  const canvas = els.pdfCanvas; const ctx = canvas.getContext("2d");
+  canvas.width = viewport.width; canvas.height = viewport.height;
+  await page.render({ canvasContext: ctx, viewport }).promise;
+  els.pageInfo.textContent = `หน้า ${pageNum} / ${pageCount}`;
+  els.prevPageBtn.disabled = pageNum <= 1; els.nextPageBtn.disabled = pageNum >= pageCount;
 }
-
-function updatePageInfo() {
-  els.pageInfo.textContent = `หน้า ${currentPage} / ${totalPages}`;
-  els.prevPageBtn.disabled = currentPage <= 1;
-  els.nextPageBtn.disabled = currentPage >= totalPages;
+function changePage(delta){
+  const next = pageNum + delta;
+  if(next < 1 || next > pageCount) return;
+  pageNum = next; renderPage();
 }
-
-async function saveSignedPdf() {
-  if (!currentPdfBlob) {
-    setStatus("ยังไม่ได้เลือก PDF");
-    return;
-  }
-  if (signaturePad.isEmpty()) {
-    setStatus("กรุณาเซ็นชื่อก่อนบันทึก");
-    return;
-  }
-
-  setStatus("กำลังฝังลายเซ็นลง PDF...");
-  const pdfBytes = await currentPdfBlob.arrayBuffer();
-  const pdfDoc = await PDFLib.PDFDocument.load(pdfBytes);
-  const pages = pdfDoc.getPages();
-  const targetPage = pages[currentPage - 1];
-  const { width } = targetPage.getSize();
-
-  const signatureDataUrl = signaturePad.toDataURL("image/png");
-  const signatureImage = await pdfDoc.embedPng(signatureDataUrl);
-
-  targetPage.drawImage(signatureImage, {
-    x: width - 220,
-    y: 70,
-    width: 170,
-    height: 70
-  });
-
-  const signedBytes = await pdfDoc.save();
-  const signedBlob = new Blob([signedBytes], { type: "application/pdf" });
-  await uploadSignedPdf(signedBlob);
+function clearViewer(){
+  els.currentFileName.textContent = "ยังไม่ได้เลือกไฟล์"; els.docStatus.className="badge muted"; els.docStatus.textContent="-";
+  els.pageInfo.textContent="หน้า - / -"; els.pdfCanvas.getContext("2d").clearRect(0,0,els.pdfCanvas.width,els.pdfCanvas.height);
 }
-
-async function uploadSignedPdf(blob) {
-  setStatus("กำลังอัปโหลดไฟล์ PDF ที่เซ็นแล้ว...");
-  const signedName = currentPdfName.replace(/\.pdf$/i, "") + "_signed.pdf";
-
-  const metadata = {
-    name: signedName,
-    mimeType: "application/pdf",
-    parents: [CONFIG.FOLDER_ID]
-  };
-
+async function saveSignedPdf(){
+  if(!currentFile || !currentPdfBytes){ toast("กรุณาเลือก PDF ก่อน"); return; }
+  if(signaturePad.isEmpty()){ toast("กรุณาเซ็นชื่อก่อนบันทึก"); return; }
+  try{
+    els.saveSignedBtn.disabled = true; toast("กำลังฝังลายเซ็นลง PDF...");
+    const { PDFDocument } = PDFLib;
+    const doc = await PDFDocument.load(currentPdfBytes.slice(0));
+    const png = await doc.embedPng(signaturePad.toDataURL("image/png"));
+    const pages = doc.getPages();
+    const targetPageIndex = Math.min(Math.max(parseInt(els.signPageInput.value || "1",10),1), pages.length) - 1;
+    const page = pages[targetPageIndex];
+    const { width, height } = page.getSize();
+    const sigW = 170, sigH = 70, margin = 48;
+    let x = width - sigW - margin, y = margin;
+    if(els.signaturePosition.value === "bottom-left") x = margin;
+    if(els.signaturePosition.value === "center"){ x = (width - sigW)/2; y = (height - sigH)/2; }
+    page.drawImage(png, { x, y, width: sigW, height: sigH });
+    const signedBytes = await doc.save();
+    const outName = currentFile.name.replace(/\.pdf$/i, "") + "_signed.pdf";
+    await uploadToDrive(outName, signedBytes);
+    signaturePad.clear(); toast("บันทึก PDF ที่เซ็นแล้วสำเร็จ");
+    await loadFiles();
+  }catch(err){ console.error(err); toast("บันทึก PDF ไม่สำเร็จ"); }
+  finally{ els.saveSignedBtn.disabled = false; }
+}
+async function uploadToDrive(name, bytes){
   const boundary = "canenext_boundary_" + Date.now();
-  const delimiter = `\r\n--${boundary}\r\n`;
-  const closeDelimiter = `\r\n--${boundary}--`;
-
-  const multipartBody = new Blob([
-    delimiter,
-    "Content-Type: application/json; charset=UTF-8\r\n\r\n",
-    JSON.stringify(metadata),
-    delimiter,
-    "Content-Type: application/pdf\r\n\r\n",
-    blob,
-    closeDelimiter
+  const metadata = { name, mimeType: "application/pdf", parents: [CONFIG.FOLDER_ID] };
+  const body = new Blob([
+    `--${boundary}\r\nContent-Type: application/json; charset=UTF-8\r\n\r\n${JSON.stringify(metadata)}\r\n`,
+    `--${boundary}\r\nContent-Type: application/pdf\r\n\r\n`,
+    new Blob([bytes], { type: "application/pdf" }),
+    `\r\n--${boundary}--`
   ], { type: `multipart/related; boundary=${boundary}` });
-
-  const res = await fetch("https://www.googleapis.com/upload/drive/v3/files?uploadType=multipart&fields=id,name,webViewLink", {
-    method: "POST",
-    headers: {
-      Authorization: `Bearer ${accessToken}`,
-      "Content-Type": `multipart/related; boundary=${boundary}`
-    },
-    body: multipartBody
+  const res = await fetch("https://www.googleapis.com/upload/drive/v3/files?uploadType=multipart&supportsAllDrives=true", {
+    method: "POST", headers: { Authorization: `Bearer ${accessToken}`, "Content-Type": `multipart/related; boundary=${boundary}` }, body
   });
-
-  if (!res.ok) {
-    setStatus("อัปโหลดไม่สำเร็จ ตรวจสอบสิทธิ์ Google Drive");
-    return;
-  }
-
-  const data = await res.json();
-  setStatus(`บันทึกสำเร็จ: ${data.name}`);
-  signaturePad.clear();
-  await loadPdfFiles();
+  if(!res.ok) throw new Error(await res.text());
+  return res.json();
 }
+function formatDate(iso){ return iso ? new Date(iso).toLocaleString("th-TH", { dateStyle:"short", timeStyle:"short" }) : ""; }
+function escapeHtml(s){ return String(s).replace(/[&<>'"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;',"'":'&#39;','"':'&quot;'}[c])); }
