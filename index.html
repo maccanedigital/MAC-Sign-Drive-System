@@ -34,6 +34,7 @@
     <section id="documentsPage" class="page active">
       <div class="panel toolbar">
         <button id="loadFilesBtn" class="btn primary">ดึงไฟล์ PDF</button>
+        <button id="refreshFilesBtn" class="btn ghost" type="button">รีเฟรชรายการ</button>
         <input id="searchInput" type="search" placeholder="ค้นหาชื่อไฟล์ PDF" />
         <button id="clearSearchBtn" class="btn ghost" type="button">ล้างการค้นหา</button>
         <select id="statusFilter">
@@ -74,7 +75,7 @@
               <select id="signaturePosition" class="hidden" aria-hidden="true">
                 <option value="bottom-right">ล่างขวา</option>
               </select>
-              <div class="sign-note">ตำแหน่งบันทึก: หน้าสุดท้าย · มุมขวาล่างสุด</div>
+              <div class="sign-note">ตำแหน่งบันทึก: หน้าแรก · มุมขวาบนสุด</div>
               <button id="clearSigBtn" class="btn ghost">ล้างลายเซ็น</button>
               <button id="saveSignedBtn" class="btn success">บันทึกลายเซ็นลง PDF</button>
             </div>
