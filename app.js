@@ -17,7 +17,8 @@ let pageNum = 1;
 let pageCount = 0;
 let signaturePad;
 let activeDocStatus = "all";
-let currentOpenMode = "view";
+let currentSaveSource = null;
+let currentViewMode = "view";
 
 const $ = (id) => document.getElementById(id);
 const els = {
@@ -131,8 +132,7 @@ function setButtons(loggedIn){
   els.loginBtn.disabled = !ready || loggedIn;
   els.loadFilesBtn.disabled = !loggedIn;
   if(els.refreshFilesBtn) els.refreshFilesBtn.disabled = !loggedIn;
-  const canSave = loggedIn && currentFile && (currentOpenMode === "sign" || currentOpenMode === "edit");
-  els.saveSignedBtn.disabled = !canSave;
+  els.saveSignedBtn.disabled = !loggedIn || !currentFile || currentViewMode === "view-signed";
 }
 
 function maybeAutoLogin(){
@@ -157,7 +157,7 @@ function logout(){
   if(accessToken) google.accounts.oauth2.revoke(accessToken);
   localStorage.removeItem("canenext_login_active");
   accessToken = null; gapi.client.setToken(null);
-  pdfFiles = []; originalFiles = []; signedFiles = []; signedFolderId = null; currentFile = null; currentPdfBytes = null; pdfDoc = null; currentOpenMode = "view";
+  pdfFiles = []; originalFiles = []; signedFiles = []; signedFolderId = null; currentFile = null; currentPdfBytes = null; pdfDoc = null;
   els.userStatus.textContent = "ออกจากระบบแล้ว";
   els.loginBtn.classList.remove("hidden"); els.logoutBtn.classList.add("hidden");
   setButtons(false); renderFiles(); updateSummary(); clearViewer(); toast("ออกจากระบบแล้ว");
@@ -178,7 +178,7 @@ async function loadFiles(){
     signedFiles = await listPdfInFolder(signedFolderId);
     pdfFiles = mapStatus(originalFiles, signedFiles);
     renderFiles(); updateSummary();
-    toast(`ดึงไฟล์ PDF สำเร็จ ${originalFiles.length} ไฟล์ | เซ็นแล้ว ${signedFiles.length} ไฟล์`);
+    toast(`ดึงไฟล์ PDF สำเร็จ ${getOriginalFiles().length} ไฟล์ | เซ็นแล้ว ${getOriginalFiles().filter(f=>f.hasSignedCopy).length} ไฟล์`);
   }catch(err){
     console.error(err);
     els.fileList.innerHTML = `<div class="empty">ดึงไฟล์ไม่ได้: ${escapeHtml(err?.result?.error?.message || err.message || 'ไม่ทราบสาเหตุ')}</div>`;
@@ -233,36 +233,52 @@ async function ensureSignedFolder(){
 }
 
 function mapStatus(originals, signed){
-  const signedMap = new Map();
-  signed.forEach(f => signedMap.set(normalizeSignedName(f.name), f));
-  const signedRows = signed.map(f => ({...f, isSignedFile: true, hasSignedCopy: true, status: "signed", folderType: "signed"}));
+  const latestSigned = getLatestSignedMap(signed);
   const originalRows = originals
-    .filter(f => !/_signed\.pdf$/i.test(f.name))
+    .filter(f => !isSignedPdfName(f.name))
     .map(f => {
-      const key = normalizeOriginalName(f.name);
-      const signedCopy = signedMap.get(key) || null;
+      const base = normalizeOriginalName(f.name);
+      const signedInfo = latestSigned.get(base);
       return {
         ...f,
         isSignedFile: false,
-        hasSignedCopy: !!signedCopy,
-        signedFileId: signedCopy?.id || null,
-        signedFileName: signedCopy?.name || null,
-        signedFile: signedCopy,
-        status: signedCopy ? "signed" : "unsigned",
+        hasSignedCopy: !!signedInfo,
+        signedFile: signedInfo ? signedInfo.file : null,
+        signedVersion: signedInfo ? signedInfo.version : 0,
+        nextSignedVersion: signedInfo ? signedInfo.version + 1 : 1,
+        status: signedInfo ? "signed" : "unsigned",
         folderType: "original"
       };
     });
-  return [...originalRows, ...signedRows];
+  return originalRows;
+}
+
+function getLatestSignedMap(signed){
+  const map = new Map();
+  signed.forEach(file => {
+    const info = parseSignedName(file.name);
+    if(!info) return;
+    const existing = map.get(info.base);
+    if(!existing || info.version > existing.version || (info.version === existing.version && String(file.modifiedTime||"") > String(existing.file.modifiedTime||""))){
+      map.set(info.base, { file, version: info.version });
+    }
+  });
+  return map;
+}
+
+function parseSignedName(name){
+  const raw = String(name || "");
+  const match = raw.match(/^(.*)_signed(?:_v(\d+))?\.pdf$/i);
+  if(!match) return null;
+  return { base: match[1].toLowerCase(), version: match[2] ? parseInt(match[2], 10) : 1 };
+}
+
+function isSignedPdfName(name){
+  return /_signed(?:_v\d+)?\.pdf$/i.test(String(name || ""));
 }
 function normalizeOriginalName(name){ return name.replace(/\.pdf$/i, "").toLowerCase(); }
-function normalizeSignedName(name){ return name.replace(/_signed(?:_v\d+)?\.pdf$/i, "").replace(/\.pdf$/i, "").toLowerCase(); }
+function normalizeSignedName(name){ const info = parseSignedName(name); return info ? info.base : String(name || "").replace(/\.pdf$/i, "").toLowerCase(); }
 function getOriginalFiles(){ return pdfFiles.filter(f=>!f.isSignedFile); }
-function getSignedCopyFor(originalFile){
-  if(!originalFile) return null;
-  if(originalFile.signedFile) return originalFile.signedFile;
-  const key = normalizeOriginalName(originalFile.name);
-  return signedFiles.find(f => normalizeSignedName(f.name) === key) || null;
-}
 function clearSearch(){
   els.searchInput.value = "";
   if(els.zoneFilter) els.zoneFilter.value = "all";
@@ -321,30 +337,14 @@ function renderFiles(){
   files.forEach(f => {
     const item = document.createElement("div");
     item.className = "file-item" + (currentFile?.id === f.id ? " active" : "");
-    const isSigned = f.status === "signed";
-    item.innerHTML = `
-      <div class="file-row">
-        <div class="file-icon pdf">PDF</div>
-        <div class="file-body">
-          <div class="file-name">${escapeHtml(f.name)}</div>
-          <div class="file-meta">
-            <span class="badge ${f.status}"><span class="mini-icon">${isSigned ? '✓' : '⌛'}</span>${isSigned ? 'เซ็นแล้ว' : 'ยังไม่เซ็น'}</span>
-            <span class="meta-chip"><span class="mini-icon">⌂</span>เขต ${escapeHtml(getZoneCode(f.name))}</span>
-            <span class="meta-chip"><span class="mini-icon">◷</span>${formatDate(f.modifiedTime)}</span>
-          </div>
-          <div class="file-actions">
-            <button class="btn tiny view-pdf" type="button">${isSigned ? 'ดู PDF ที่เซ็นแล้ว' : 'เปิด PDF'}</button>
-            ${isSigned ? '<button class="btn tiny ghost edit-signature" type="button">แก้ไขลายเซ็น</button>' : '<button class="btn tiny success sign-doc" type="button">เซ็นเอกสาร</button>'}
-          </div>
-        </div>
-        <div class="open-icon">›</div>
-      </div>`;
-    item.addEventListener("click", () => openFile(f, { mode: isSigned ? "viewSigned" : "sign" }));
-    item.querySelector(".view-pdf").addEventListener("click", (ev) => { ev.stopPropagation(); openFile(f, { mode: isSigned ? "viewSigned" : "viewOriginal" }); });
+    const versionText = f.hasSignedCopy ? `<span class="meta-chip"><span class="mini-icon">v</span>Version ${f.signedVersion}</span>` : "";
+    const primaryText = f.hasSignedCopy ? "ดู PDF ที่เซ็นแล้ว" : "เซ็นเอกสาร";
+    const secondaryBtn = f.hasSignedCopy ? `<button class="file-action edit-signature" type="button">แก้ไขลายเซ็น</button>` : "";
+    item.innerHTML = `<div class="file-row"><div class="file-icon pdf">PDF</div><div class="file-body"><div class="file-name">${escapeHtml(f.name)}</div><div class="file-meta"><span class="badge ${f.status}"><span class="mini-icon">${f.status === 'signed' ? '✓' : '⌛'}</span>${f.status === 'signed' ? 'เซ็นแล้ว' : 'ยังไม่เซ็น'}</span>${versionText}<span class="meta-chip"><span class="mini-icon">⌂</span>เขต ${escapeHtml(getZoneCode(f.name))}</span><span class="meta-chip"><span class="mini-icon">◷</span>${formatDate(f.modifiedTime)}</span></div><div class="file-actions"><button class="file-action view-pdf" type="button">${primaryText}</button>${secondaryBtn}</div></div><div class="open-icon">›</div></div>`;
+    item.addEventListener("click", () => openFile(f, { mode: f.hasSignedCopy ? "view-signed" : "sign" }));
+    item.querySelector(".view-pdf").addEventListener("click", (ev) => { ev.stopPropagation(); openFile(f, { mode: f.hasSignedCopy ? "view-signed" : "sign" }); });
     const editBtn = item.querySelector(".edit-signature");
     if(editBtn) editBtn.addEventListener("click", (ev) => { ev.stopPropagation(); editSignature(f); });
-    const signBtn = item.querySelector(".sign-doc");
-    if(signBtn) signBtn.addEventListener("click", (ev) => { ev.stopPropagation(); openFile(f, { mode: "sign" }); });
     els.fileList.appendChild(item);
   });
 }
@@ -434,55 +434,41 @@ function filterByZone(zone){
   toast(`แสดงเอกสารเขต ${zone}`);
 }
 async function openFile(file, options = {}){
-  const requestedMode = options.mode || (file.status === "signed" ? "viewSigned" : "sign");
-  const signedCopy = getSignedCopyFor(file);
-  let fileToOpen = file;
-  currentOpenMode = "view";
-
-  if(requestedMode === "viewSigned" && signedCopy){
-    fileToOpen = signedCopy;
-    currentOpenMode = "viewSigned";
-  }else if(requestedMode === "edit"){
-    fileToOpen = file;
-    currentOpenMode = "edit";
-  }else if(requestedMode === "sign"){
-    fileToOpen = file;
-    currentOpenMode = "sign";
-  }else{
-    fileToOpen = file;
-    currentOpenMode = "viewOriginal";
-  }
-
+  const mode = options.mode || (file.hasSignedCopy ? "view-signed" : "sign");
   currentFile = file;
-  setButtons(true);
-  renderFiles();
-  els.currentFileName.textContent = currentOpenMode === "viewSigned" ? `${file.name} (ฉบับเซ็นแล้ว)` : file.name;
+  currentViewMode = mode;
+  const sourceFile = mode === "view-signed" && file.signedFile ? file.signedFile : file;
+  currentSaveSource = {
+    originalFile: file,
+    sourceFile,
+    mode,
+    nextVersion: Number(file.nextSignedVersion || 1)
+  };
+  setButtons(true); renderFiles();
+  const suffix = mode === "view-signed" ? " · ฉบับที่มีลายเซ็น" : (file.hasSignedCopy ? ` · แก้ไขลายเซ็นใหม่ v${currentSaveSource.nextVersion}` : " · พร้อมเซ็น");
+  els.currentFileName.textContent = file.name + suffix;
   els.docStatus.className = `badge ${file.status}`;
-  if(currentOpenMode === "edit") els.docStatus.textContent = "แก้ไขลายเซ็น";
-  else if(currentOpenMode === "viewSigned") els.docStatus.textContent = "เซ็นแล้ว - เปิดฉบับมีลายเซ็น";
-  else els.docStatus.textContent = file.status === "signed" ? "เซ็นแล้ว" : "ยังไม่เซ็น";
-  if(currentOpenMode === "viewSigned" || currentOpenMode === "viewOriginal") signaturePad.clear();
-
+  els.docStatus.textContent = file.status === "signed" ? `เซ็นแล้ว v${file.signedVersion}` : "ยังไม่เซ็น";
   try{
-    toast(currentOpenMode === "viewSigned" ? "กำลังเปิด PDF ที่เซ็นแล้ว..." : "กำลังเปิด PDF...");
-    const res = await fetch(`https://www.googleapis.com/drive/v3/files/${fileToOpen.id}?alt=media&supportsAllDrives=true`, { headers: { Authorization: `Bearer ${accessToken}` }});
+    toast(mode === "view-signed" ? "กำลังเปิด PDF ที่เซ็นแล้ว..." : "กำลังเปิด PDF ต้นฉบับ...");
+    const res = await fetch(`https://www.googleapis.com/drive/v3/files/${sourceFile.id}?alt=media&supportsAllDrives=true`, { headers: { Authorization: `Bearer ${accessToken}` }});
     if(!res.ok) throw new Error(await res.text());
     currentPdfBytes = await res.arrayBuffer();
     pdfDoc = await pdfjsLib.getDocument({ data: currentPdfBytes.slice(0) }).promise;
     pageCount = pdfDoc.numPages; pageNum = 1; els.signPageInput.max = pageCount; els.signPageInput.value = 1;
+    signaturePad.clear();
     await renderPage();
     setButtons(true);
-    toast(currentOpenMode === "viewSigned" ? "เปิด PDF ที่เซ็นแล้วสำเร็จ" : "เปิด PDF สำเร็จ");
+    toast(mode === "view-signed" ? "เปิด PDF ที่เซ็นแล้วสำเร็จ" : "เปิด PDF ต้นฉบับสำเร็จ");
   }catch(err){ console.error(err); toast("เปิด PDF ไม่ได้"); }
 }
 
 function editSignature(file){
-  const ok = confirm("ต้องการแก้ไขลายเซ็นใช่หรือไม่?\n\nระบบจะเปิดไฟล์ต้นฉบับเพื่อให้เซ็นใหม่ และเมื่อกดบันทึก จะบันทึกทับไฟล์ _signed.pdf เดิมใน 02_Signed_PDF");
+  if(!file || !file.hasSignedCopy){ return; }
+  const ok = confirm(`ต้องการแก้ไขลายเซ็นของไฟล์ ${file.name} ใช่หรือไม่?\n\nระบบจะเปิดไฟล์ต้นฉบับให้เซ็นใหม่ และบันทึกเป็นเวอร์ชันใหม่โดยไม่ทับไฟล์เดิม`);
   if(!ok) return;
-  signaturePad.clear();
-  openFile(file, { mode: "edit" });
+  openFile(file, { mode: "edit-signature" });
 }
-
 async function renderPage(){
   if(!pdfDoc) return;
   const page = await pdfDoc.getPage(pageNum);
@@ -500,10 +486,11 @@ function changePage(delta){
 }
 function clearViewer(){
   els.currentFileName.textContent = "ยังไม่ได้เลือกไฟล์"; els.docStatus.className="badge muted"; els.docStatus.textContent="-";
-  els.pageInfo.textContent="หน้า - / -"; currentOpenMode = "view"; els.pdfCanvas.getContext("2d").clearRect(0,0,els.pdfCanvas.width,els.pdfCanvas.height);
+  els.pageInfo.textContent="หน้า - / -"; els.pdfCanvas.getContext("2d").clearRect(0,0,els.pdfCanvas.width,els.pdfCanvas.height);
 }
 async function saveSignedPdf(){
   if(!currentFile || !currentPdfBytes){ toast("กรุณาเลือก PDF ก่อน"); return; }
+  if(currentViewMode === "view-signed"){ toast("กำลังดู PDF ที่เซ็นแล้ว หากต้องการแก้ไขให้กดปุ่มแก้ไขลายเซ็น"); return; }
   if(signaturePad.isEmpty()){ toast("กรุณาเซ็นชื่อก่อนบันทึก"); return; }
   try{
     els.saveSignedBtn.disabled = true; toast("กำลังฝังลายเซ็นลง PDF...");
@@ -523,30 +510,27 @@ async function saveSignedPdf(){
     page.drawImage(png, { x, y, width: sigW, height: sigH });
     const signedBytes = await doc.save();
     if(!signedFolderId) signedFolderId = await ensureSignedFolder();
-    const outName = currentFile.name.replace(/\.pdf$/i, "") + "_signed.pdf";
-    const existingSigned = getSignedCopyFor(currentFile);
-    await uploadToDrive(outName, signedBytes, existingSigned?.id || null);
-    signaturePad.clear(); toast(existingSigned ? "แก้ไขลายเซ็นและบันทึกทับไฟล์เดิมสำเร็จ" : "บันทึก PDF ที่เซ็นแล้วสำเร็จ");
+    const saveInfo = currentSaveSource || { originalFile: currentFile, nextVersion: 1 };
+    const originalName = (saveInfo.originalFile?.name || currentFile.name).replace(/\.pdf$/i, "");
+    const version = Number(saveInfo.nextVersion || 1);
+    const outName = `${originalName}_signed_v${version}.pdf`;
+    await uploadToDrive(outName, signedBytes);
+    signaturePad.clear(); toast(`บันทึก PDF ที่เซ็นแล้วสำเร็จ เป็นเวอร์ชัน v${version}`);
     await loadFiles();
   }catch(err){ console.error(err); toast("บันทึก PDF ไม่สำเร็จ"); }
-  finally{ setButtons(true); }
+  finally{ els.saveSignedBtn.disabled = false; }
 }
-async function uploadToDrive(name, bytes, existingFileId = null){
+async function uploadToDrive(name, bytes){
   const boundary = "canenext_boundary_" + Date.now();
-  const metadata = existingFileId ? { name, mimeType: "application/pdf" } : { name, mimeType: "application/pdf", parents: [signedFolderId || CONFIG.FOLDER_ID] };
+  const metadata = { name, mimeType: "application/pdf", parents: [signedFolderId || CONFIG.FOLDER_ID] };
   const body = new Blob([
     `--${boundary}\r\nContent-Type: application/json; charset=UTF-8\r\n\r\n${JSON.stringify(metadata)}\r\n`,
     `--${boundary}\r\nContent-Type: application/pdf\r\n\r\n`,
     new Blob([bytes], { type: "application/pdf" }),
     `\r\n--${boundary}--`
   ], { type: `multipart/related; boundary=${boundary}` });
-  const uploadUrl = existingFileId
-    ? `https://www.googleapis.com/upload/drive/v3/files/${existingFileId}?uploadType=multipart&supportsAllDrives=true`
-    : "https://www.googleapis.com/upload/drive/v3/files?uploadType=multipart&supportsAllDrives=true";
-  const res = await fetch(uploadUrl, {
-    method: existingFileId ? "PATCH" : "POST",
-    headers: { Authorization: `Bearer ${accessToken}`, "Content-Type": `multipart/related; boundary=${boundary}` },
-    body
+  const res = await fetch("https://www.googleapis.com/upload/drive/v3/files?uploadType=multipart&supportsAllDrives=true", {
+    method: "POST", headers: { Authorization: `Bearer ${accessToken}`, "Content-Type": `multipart/related; boundary=${boundary}` }, body
   });
   if(!res.ok) throw new Error(await res.text());
   return res.json();

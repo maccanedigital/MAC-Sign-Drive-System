@@ -88,9 +88,9 @@ body:before{
 @media(max-width:1120px){.content-grid{grid-template-columns:1fr}.file-panel{height:auto;max-height:390px;position:static}.toolbar{grid-template-columns:1fr 1fr}.toolbar input{grid-column:1/3}.viewer-panel{min-height:0}.tabs{top:74px}}
 @media(max-width:680px){.doc-filter-tabs{grid-template-columns:1fr 1fr 1fr}.doc-filter{font-size:12px;padding:9px 8px}.doc-filter span{padding:3px 7px}.app-header{align-items:flex-start;gap:12px;flex-direction:column;padding:16px}.app-header h1{font-size:30px}.auth-area{justify-content:flex-start}.tabs{top:102px;overflow:auto;padding:10px 14px}.layout{padding:12px}.toolbar{grid-template-columns:1fr;gap:9px}.toolbar input{grid-column:auto}.summary-cards{grid-template-columns:1fr}.viewer-top{flex-direction:column;align-items:stretch}.page-control{justify-content:space-between}.pdf-wrap{padding:12px;min-height:360px}#signatureCanvas{height:160px}.sign-options{align-items:stretch}.sign-options .btn,.sign-options label{width:100%;justify-content:space-between}.summary-card strong{font-size:38px}.zone-panel{padding:14px}.zone-header{align-items:flex-start}.progress-cell{grid-template-columns:1fr 64px}.zone-table th,.zone-table td{padding:11px 10px}}
 
-/* CaneNext update: document actions */
-.file-actions{display:flex;gap:7px;flex-wrap:wrap;margin-top:10px}
-.btn.tiny{min-height:30px;padding:6px 10px;border-radius:10px;font-size:12px;box-shadow:none}
-.btn.tiny:hover{box-shadow:0 6px 14px rgba(16,36,60,.12)}
-.file-item .file-actions .btn{white-space:normal}
-@media(max-width:680px){.file-row{grid-template-columns:42px 1fr}.open-icon{display:none}.file-icon{width:42px;height:42px}.file-actions .btn{flex:1 1 100%}}
+/* Versioned signature actions */
+.file-actions{display:flex;gap:8px;flex-wrap:wrap;margin-top:10px}
+.file-action{border:1px solid #cfe0f0;background:#fff;color:#0f5f8f;border-radius:999px;padding:7px 11px;font-size:12px;font-weight:900;cursor:pointer;transition:.15s ease}
+.file-action:hover{background:#eaf7ff;border-color:#7dccf3;transform:translateY(-1px)}
+.file-action.edit-signature{color:#805000;background:#fff8e8;border-color:#f7d484}
+.file-action.edit-signature:hover{background:#fff2cc;border-color:#f0bd3d}
