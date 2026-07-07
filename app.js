@@ -252,7 +252,7 @@ async function openFile(file){
     if(!res.ok) throw new Error(await res.text());
     currentPdfBytes = await res.arrayBuffer();
     pdfDoc = await pdfjsLib.getDocument({ data: currentPdfBytes.slice(0) }).promise;
-    pageCount = pdfDoc.numPages; pageNum = 1; els.signPageInput.max = pageCount; els.signPageInput.value = pageCount;
+    pageCount = pdfDoc.numPages; pageNum = 1; els.signPageInput.max = pageCount; els.signPageInput.value = 1;
     await renderPage(); toast("เปิด PDF สำเร็จ");
   }catch(err){ console.error(err); toast("เปิด PDF ไม่ได้"); }
 }
@@ -284,12 +284,15 @@ async function saveSignedPdf(){
     const doc = await PDFDocument.load(currentPdfBytes.slice(0));
     const png = await doc.embedPng(signaturePad.toDataURL("image/png"));
     const pages = doc.getPages();
-    // วางลายเซ็นอัตโนมัติที่มุมขวาล่างของหน้าสุดท้ายเสมอ
+    // ฝังลายเซ็นที่หน้าสุดท้ายเสมอ และจัดชิดมุมขวาล่างสุดของกระดาษ
+    // หมายเหตุ: ระบบพิกัดของ PDF เริ่มจากมุมซ้ายล่าง ดังนั้น y = 0 คือขอบล่างสุด
     const page = pages[pages.length - 1];
     const { width, height } = page.getSize();
-    const sigW = 170, sigH = 70, margin = 20;
-    const x = Math.max(margin, width - sigW - margin);
-    const y = margin;
+    const sigW = 150;
+    const sigH = 55;
+    const edgeOffset = 0;
+    const x = Math.max(0, width - sigW - edgeOffset);
+    const y = edgeOffset;
     page.drawImage(png, { x, y, width: sigW, height: sigH });
     const signedBytes = await doc.save();
     if(!signedFolderId) signedFolderId = await ensureSignedFolder();
