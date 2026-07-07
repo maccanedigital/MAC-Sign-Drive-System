@@ -257,23 +257,28 @@ function clearSearch(){
   toast("ล้างการค้นหาแล้ว");
 }
 
-function filteredFiles(){
+function getBaseFilteredOriginals(){
   const q = els.searchInput.value.trim().toLowerCase();
-  const status = activeDocStatus || "all";
   const zone = els.zoneFilter ? els.zoneFilter.value : "all";
-  return pdfFiles.filter(f => {
+  return getOriginalFiles().filter(f => {
     const matchText = !q || f.name.toLowerCase().includes(q);
-    const matchStatus = status === "all" || f.status === status;
     const fileZone = getZoneCode(f.name);
     const matchZone = zone === "all" || fileZone === zone;
-    return matchText && matchStatus && matchZone;
+    return matchText && matchZone;
   });
+}
+
+function filteredFiles(){
+  const status = activeDocStatus || "all";
+  return getBaseFilteredOriginals().filter(f => status === "all" || f.status === status);
 }
 function updateDocFilterTabs(){
   document.querySelectorAll(".doc-filter").forEach(btn => btn.classList.toggle("active", btn.dataset.status === activeDocStatus));
 }
 function updateDocFilterCounts(){
-  const originals = getOriginalFiles();
+  // จำนวนบนแท็บจะอ้างอิงตามเขตและคำค้นหาที่กำลังกรองอยู่
+  // เช่น เลือกเขต 03 จะแสดงจำนวน ทั้งหมด/เซ็นแล้ว/ยังไม่เซ็น เฉพาะเขต 03
+  const originals = getBaseFilteredOriginals();
   const signed = originals.filter(f => f.hasSignedCopy).length;
   const unsigned = originals.length - signed;
   if(els.tabAllCount) els.tabAllCount.textContent = originals.length.toLocaleString("th-TH");
@@ -292,7 +297,8 @@ function renderFiles(){
   const zone = els.zoneFilter ? els.zoneFilter.value : "all";
   const zoneText = zone === "all" ? "ทุกเขต" : `เขต ${zone}`;
   if(els.fileListInfo){
-    els.fileListInfo.textContent = `แสดง: ${statusLabel(activeDocStatus)} · ${zoneText} · พบ ${files.length.toLocaleString("th-TH")} รายการ`;
+    const baseCount = getBaseFilteredOriginals().length;
+    els.fileListInfo.textContent = `แสดง: ${statusLabel(activeDocStatus)} · ${zoneText} · พบ ${files.length.toLocaleString("th-TH")} รายการ จาก ${baseCount.toLocaleString("th-TH")} รายการในเงื่อนไขเขต/คำค้นหา`;
   }
   if(!files.length){ els.fileList.className="file-list empty"; els.fileList.textContent="ไม่พบไฟล์ PDF ตามเงื่อนไขที่เลือก"; return; }
   els.fileList.className="file-list"; els.fileList.innerHTML = "";
