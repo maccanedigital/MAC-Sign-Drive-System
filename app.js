@@ -28,7 +28,8 @@ const els = {
   pdfCanvas: $("pdfCanvas"), signatureCanvas: $("signatureCanvas"), prevPageBtn: $("prevPageBtn"),
   nextPageBtn: $("nextPageBtn"), pageInfo: $("pageInfo"), signPageInput: $("signPageInput"),
   signaturePosition: $("signaturePosition"), clearSigBtn: $("clearSigBtn"), saveSignedBtn: $("saveSignedBtn"),
-  totalCount: $("totalCount"), signedCount: $("signedCount"), unsignedCount: $("unsignedCount"), completionPercent: $("completionPercent"), completionBar: $("completionBar"), summaryHint: $("summaryHint"), unsignedList: $("unsignedList"), zoneSummaryBody: $("zoneSummaryBody"), toast: $("toast")
+  totalCount: $("totalCount"), signedCount: $("signedCount"), unsignedCount: $("unsignedCount"), completionPercent: $("completionPercent"), completionBar: $("completionBar"), summaryHint: $("summaryHint"), unsignedList: $("unsignedList"), zoneSummaryBody: $("zoneSummaryBody"), toast: $("toast"),
+  summaryZoneFilter: $("summaryZoneFilter"), summarySubZoneFilter: $("summarySubZoneFilter"), summaryClearFilterBtn: $("summaryClearFilterBtn")
 };
 
 window.addEventListener("load", () => {
@@ -47,8 +48,11 @@ function bindEvents(){
   els.searchInput.addEventListener("input", renderFiles);
   els.clearSearchBtn.addEventListener("click", clearSearch);
   if(els.statusFilter) els.statusFilter.addEventListener("change", () => { activeDocStatus = els.statusFilter.value; updateDocFilterTabs(); renderFiles(); });
-  if(els.zoneFilter) els.zoneFilter.addEventListener("change", () => { updateSubZoneOptions(); renderFiles(); updateSummary(); });
-  if(els.subZoneFilter) els.subZoneFilter.addEventListener("change", () => { renderFiles(); updateSummary(); });
+  if(els.zoneFilter) els.zoneFilter.addEventListener("change", () => { syncZoneControls("document"); updateSubZoneOptions(); renderFiles(); updateSummary(); });
+  if(els.subZoneFilter) els.subZoneFilter.addEventListener("change", () => { syncSubZoneControls("document"); renderFiles(); updateSummary(); });
+  if(els.summaryZoneFilter) els.summaryZoneFilter.addEventListener("change", () => { syncZoneControls("summary"); updateSubZoneOptions(); renderFiles(); updateSummary(); });
+  if(els.summarySubZoneFilter) els.summarySubZoneFilter.addEventListener("change", () => { syncSubZoneControls("summary"); renderFiles(); updateSummary(); });
+  if(els.summaryClearFilterBtn) els.summaryClearFilterBtn.addEventListener("click", () => { clearSearch(); switchPage("summary"); });
   document.querySelectorAll(".doc-filter").forEach(btn => btn.addEventListener("click", () => {
     activeDocStatus = btn.dataset.status;
     if(els.statusFilter) els.statusFilter.value = activeDocStatus;
@@ -281,10 +285,40 @@ function isSignedPdfName(name){
 function normalizeOriginalName(name){ return name.replace(/\.pdf$/i, "").toLowerCase(); }
 function normalizeSignedName(name){ const info = parseSignedName(name); return info ? info.base : String(name || "").replace(/\.pdf$/i, "").toLowerCase(); }
 function getOriginalFiles(){ return pdfFiles.filter(f=>!f.isSignedFile); }
+
+function setSelectValue(select, value){
+  if(!select) return;
+  select.value = value;
+}
+
+function getSelectedZone(){
+  return (els.zoneFilter && els.zoneFilter.value) || (els.summaryZoneFilter && els.summaryZoneFilter.value) || "all";
+}
+
+function getSelectedSubZone(){
+  return (els.subZoneFilter && els.subZoneFilter.value) || (els.summarySubZoneFilter && els.summarySubZoneFilter.value) || "all";
+}
+
+function syncZoneControls(source){
+  const value = source === "summary" ? (els.summaryZoneFilter?.value || "all") : (els.zoneFilter?.value || "all");
+  setSelectValue(els.zoneFilter, value);
+  setSelectValue(els.summaryZoneFilter, value);
+  setSelectValue(els.subZoneFilter, "all");
+  setSelectValue(els.summarySubZoneFilter, "all");
+}
+
+function syncSubZoneControls(source){
+  const value = source === "summary" ? (els.summarySubZoneFilter?.value || "all") : (els.subZoneFilter?.value || "all");
+  setSelectValue(els.subZoneFilter, value);
+  setSelectValue(els.summarySubZoneFilter, value);
+}
+
 function clearSearch(){
   els.searchInput.value = "";
   if(els.zoneFilter) els.zoneFilter.value = "all";
+  if(els.summaryZoneFilter) els.summaryZoneFilter.value = "all";
   if(els.subZoneFilter) els.subZoneFilter.value = "all";
+  if(els.summarySubZoneFilter) els.summarySubZoneFilter.value = "all";
   updateSubZoneOptions();
   activeDocStatus = "all";
   if(els.statusFilter) els.statusFilter.value = "all";
@@ -295,8 +329,8 @@ function clearSearch(){
 
 function getBaseFilteredOriginals(){
   const q = els.searchInput.value.trim().toLowerCase();
-  const zone = els.zoneFilter ? els.zoneFilter.value : "all";
-  const subZone = els.subZoneFilter ? els.subZoneFilter.value : "all";
+  const zone = getSelectedZone();
+  const subZone = getSelectedSubZone();
   return getOriginalFiles().filter(f => {
     const matchText = !q || f.name.toLowerCase().includes(q);
     const fileZone = getZoneCode(f.name);
@@ -308,16 +342,20 @@ function getBaseFilteredOriginals(){
 }
 
 function updateSubZoneOptions(){
-  if(!els.subZoneFilter) return;
-  const selectedZone = els.zoneFilter ? els.zoneFilter.value : "all";
-  const current = els.subZoneFilter.value || "all";
-  const subZones = Array.from(new Set(getOriginalFiles()
-    .filter(f => selectedZone === "all" || getZoneCode(f.name) === selectedZone)
+  const selectedZone = getSelectedZone();
+  const current = getSelectedSubZone();
+  const subZones = selectedZone === "all" ? [] : Array.from(new Set(getOriginalFiles()
+    .filter(f => getZoneCode(f.name) === selectedZone)
     .map(f => getSubZoneCode(f.name))
     .filter(z => z && z !== "ไม่ระบุ")
   )).sort((a,b) => a.localeCompare(b, "th"));
-  els.subZoneFilter.innerHTML = `<option value="all">ทุกเขตย่อย</option>` + subZones.map(z => `<option value="${escapeHtml(z)}">เขตย่อย ${escapeHtml(z)}</option>`).join("");
-  els.subZoneFilter.value = subZones.includes(current) ? current : "all";
+  const html = `<option value="all">${selectedZone === "all" ? "เลือกเขตก่อน" : "ทุกเขตย่อย"}</option>` + subZones.map(z => `<option value="${escapeHtml(z)}">เขตย่อย ${escapeHtml(z)}</option>`).join("");
+  [els.subZoneFilter, els.summarySubZoneFilter].forEach(select => {
+    if(!select) return;
+    select.innerHTML = html;
+    select.disabled = selectedZone === "all";
+    select.value = subZones.includes(current) ? current : "all";
+  });
 }
 
 function filteredFiles(){
@@ -346,8 +384,8 @@ function renderFiles(){
   updateDocFilterTabs();
   updateDocFilterCounts();
   const files = filteredFiles();
-  const zone = els.zoneFilter ? els.zoneFilter.value : "all";
-  const subZone = els.subZoneFilter ? els.subZoneFilter.value : "all";
+  const zone = getSelectedZone();
+  const subZone = getSelectedSubZone();
   const zoneText = zone === "all" ? "ทุกเขต" : `เขต ${zone}`;
   const subZoneText = subZone === "all" ? "ทุกเขตย่อย" : `เขตย่อย ${subZone}`;
   if(els.fileListInfo){
@@ -406,9 +444,10 @@ function getSubZoneCode(filename){
 
 function updateZoneSummary(originals){
   if(!els.zoneSummaryBody) return;
-  const selectedZone = els.zoneFilter ? els.zoneFilter.value : "all";
-  const selectedSubZone = els.subZoneFilter ? els.subZoneFilter.value : "all";
+  const selectedZone = getSelectedZone();
+  const selectedSubZone = getSelectedSubZone();
   const titleEl = document.getElementById("summaryTableTitle");
+  const subtitleEl = document.getElementById("summaryTableSubtitle");
   const firstColEl = document.getElementById("summaryFirstCol");
   const zoneCardsEl = document.getElementById("zoneOverviewCards");
   if(zoneCardsEl) zoneCardsEl.innerHTML = "";
@@ -417,6 +456,7 @@ function updateZoneSummary(originals){
   // หากเลือกเขต: แสดงสรุปตามเขตย่อยของเขตนั้น
   if(selectedZone === "all"){
     if(titleEl) titleEl.textContent = "ตารางสรุปสถานะรายเขต 01–12";
+    if(subtitleEl) subtitleEl.textContent = "ยังไม่เลือกเขต: แสดงสรุปรายเขต 01–12";
     if(firstColEl) firstColEl.textContent = "เขต";
     const zones = Array.from({length:12}, (_, i) => String(i + 1).padStart(2, "0"));
     const summary = Object.fromEntries(zones.map(z => [z, { total:0, signed:0, unsigned:0 }]));
@@ -446,6 +486,7 @@ function updateZoneSummary(originals){
   }
 
   if(titleEl) titleEl.textContent = `ตารางสรุปสถานะเขตย่อยของเขต ${selectedZone}`;
+  if(subtitleEl) subtitleEl.textContent = selectedSubZone === "all" ? `เลือกเขตแล้ว: แสดงรายเขตย่อยทั้งหมดในเขต ${selectedZone}` : `กำลังแสดงเฉพาะเขตย่อย ${selectedSubZone} ของเขต ${selectedZone}`;
   if(firstColEl) firstColEl.textContent = "เขตย่อย";
   const filesInZone = originals.filter(file => getZoneCode(file.name) === selectedZone);
   const subZones = Array.from(new Set(filesInZone.map(file => getSubZoneCode(file.name)).filter(Boolean))).sort((a,b) => a.localeCompare(b, "th"));
@@ -498,8 +539,10 @@ function filterByZone(zone){
   switchPage("documents");
   els.searchInput.value = "";
   if(els.zoneFilter) els.zoneFilter.value = zone || "all";
-  updateSubZoneOptions();
+  if(els.summaryZoneFilter) els.summaryZoneFilter.value = zone || "all";
   if(els.subZoneFilter) els.subZoneFilter.value = "all";
+  if(els.summarySubZoneFilter) els.summarySubZoneFilter.value = "all";
+  updateSubZoneOptions();
   activeDocStatus = "all";
   if(els.statusFilter) els.statusFilter.value = "all";
   updateDocFilterTabs();
@@ -511,6 +554,7 @@ function filterByZone(zone){
 function filterBySubZone(subZone){
   switchPage("documents");
   if(els.subZoneFilter) els.subZoneFilter.value = subZone || "all";
+  if(els.summarySubZoneFilter) els.summarySubZoneFilter.value = subZone || "all";
   activeDocStatus = "all";
   if(els.statusFilter) els.statusFilter.value = "all";
   updateDocFilterTabs();

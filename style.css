@@ -763,3 +763,17 @@ body:before{
   #summaryPage .compact-zone-table-wrap{overflow:auto !important;}
   #summaryPage .compact-zone-table{min-width:620px !important;}
 }
+
+/* Summary table filter controls - final zone/sub-zone display */
+.zone-subtitle{margin:3px 0 0;color:var(--muted);font-size:12px;font-weight:800}
+.summary-filter-bar{display:flex;align-items:end;gap:10px;flex-wrap:wrap;margin:8px 0 10px;padding:10px;border:1px solid var(--line);border-radius:14px;background:#f8fbff}
+.summary-filter-bar label{display:grid;gap:4px;font-size:12px;color:var(--muted);font-weight:900;min-width:150px}
+.summary-filter-bar select{height:38px;border:1px solid var(--line);border-radius:12px;background:#fff;padding:0 12px;font:inherit;font-weight:850;color:var(--text)}
+.summary-filter-bar select:disabled{background:#eef3f8;color:#8da0b2;cursor:not-allowed}
+.summary-filter-bar .btn{height:38px;padding:0 14px}
+#summaryPage .zone-table-wrap{max-height:none!important;overflow:visible!important}
+#summaryPage .compact-zone-table th,#summaryPage .compact-zone-table td{padding:7px 9px!important}
+#summaryPage .compact-zone-table tbody tr{height:36px!important}
+#summaryPage .compact-zone-table .zone-link,#summaryPage .compact-zone-table .subzone-link{border:0;background:transparent;padding:2px 4px!important;color:#10243c;cursor:pointer;font-weight:1000}
+#summaryPage .compact-zone-table .subzone-avatar{background:linear-gradient(135deg,#475569,#0ea5e9)!important}
+@media(max-width:760px){.summary-filter-bar{align-items:stretch}.summary-filter-bar label{min-width:100%;}.summary-filter-bar .btn{width:100%}}

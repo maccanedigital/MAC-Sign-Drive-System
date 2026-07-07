@@ -148,13 +148,38 @@
             <div class="zone-title-icon">📋</div>
             <div>
               <h2 id="summaryTableTitle">ตารางสรุปสถานะรายเขต 01–12</h2>
-              
+              <p class="zone-subtitle" id="summaryTableSubtitle">ยังไม่เลือกเขต: แสดงสรุปรายเขต 01–12</p>
             </div>
           </div>
           <div class="zone-legend">
             <span><i class="legend-dot done"></i> เซ็นแล้ว</span>
             <span><i class="legend-dot wait"></i> คงเหลือ</span>
           </div>
+        </div>
+        <div class="summary-filter-bar">
+          <label>เขต
+            <select id="summaryZoneFilter" title="เลือกเขตเพื่อดูสรุปเขตย่อย">
+              <option value="all">ทุกเขต 01–12</option>
+              <option value="01">เขต 01</option>
+              <option value="02">เขต 02</option>
+              <option value="03">เขต 03</option>
+              <option value="04">เขต 04</option>
+              <option value="05">เขต 05</option>
+              <option value="06">เขต 06</option>
+              <option value="07">เขต 07</option>
+              <option value="08">เขต 08</option>
+              <option value="09">เขต 09</option>
+              <option value="10">เขต 10</option>
+              <option value="11">เขต 11</option>
+              <option value="12">เขต 12</option>
+            </select>
+          </label>
+          <label>เขตย่อย
+            <select id="summarySubZoneFilter" title="เลือกเขตย่อย">
+              <option value="all">ทุกเขตย่อย</option>
+            </select>
+          </label>
+          <button id="summaryClearFilterBtn" class="btn ghost" type="button">ล้างตัวกรอง</button>
         </div>
         <div class="zone-table-wrap compact-zone-table-wrap">
           <table class="zone-table compact-zone-table">
