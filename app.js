@@ -6,6 +6,9 @@ let accessToken = null;
 let gapiReady = false;
 let gisReady = false;
 let pdfFiles = [];
+let originalFiles = [];
+let signedFiles = [];
+let signedFolderId = null;
 let currentFile = null;
 let currentPdfBytes = null;
 let pdfDoc = null;
@@ -117,7 +120,7 @@ function login(){
 function logout(){
   if(accessToken) google.accounts.oauth2.revoke(accessToken);
   accessToken = null; gapi.client.setToken(null);
-  pdfFiles = []; currentFile = null; currentPdfBytes = null; pdfDoc = null;
+  pdfFiles = []; originalFiles = []; signedFiles = []; signedFolderId = null; currentFile = null; currentPdfBytes = null; pdfDoc = null;
   els.userStatus.textContent = "ออกจากระบบแล้ว";
   els.loginBtn.classList.remove("hidden"); els.logoutBtn.classList.add("hidden");
   setButtons(false); renderFiles(); updateSummary(); clearViewer(); toast("ออกจากระบบแล้ว");
@@ -127,23 +130,12 @@ async function loadFiles(){
   if(!accessToken){ toast("กรุณาเข้าสู่ระบบก่อน"); return; }
   els.fileList.textContent = "กำลังดึงไฟล์...";
   try{
-    let all = []; let pageToken;
-    do{
-      const res = await gapi.client.drive.files.list({
-        q: `'${CONFIG.FOLDER_ID}' in parents and mimeType='application/pdf' and trashed=false`,
-        fields: "nextPageToken, files(id,name,mimeType,modifiedTime,size,webViewLink)",
-        orderBy: "modifiedTime desc",
-        pageSize: 100,
-        pageToken,
-        supportsAllDrives: true,
-        includeItemsFromAllDrives: true
-      });
-      all = all.concat(res.result.files || []);
-      pageToken = res.result.nextPageToken;
-    }while(pageToken);
-    pdfFiles = mapStatus(all);
+    signedFolderId = await ensureSignedFolder();
+    originalFiles = await listPdfInFolder(CONFIG.FOLDER_ID);
+    signedFiles = await listPdfInFolder(signedFolderId);
+    pdfFiles = mapStatus(originalFiles, signedFiles);
     renderFiles(); updateSummary();
-    toast(`ดึงไฟล์ PDF สำเร็จ ${pdfFiles.length} ไฟล์`);
+    toast(`ดึงไฟล์ PDF สำเร็จ ${originalFiles.length} ไฟล์ | เซ็นแล้ว ${signedFiles.length} ไฟล์`);
   }catch(err){
     console.error(err);
     els.fileList.innerHTML = `<div class="empty">ดึงไฟล์ไม่ได้: ${escapeHtml(err?.result?.error?.message || err.message || 'ไม่ทราบสาเหตุ')}</div>`;
@@ -151,14 +143,68 @@ async function loadFiles(){
   }
 }
 
-function mapStatus(files){
-  const signedBase = new Set(files.filter(f=>/_signed\.pdf$/i.test(f.name)).map(f=>f.name.replace(/_signed\.pdf$/i,".pdf").toLowerCase()));
-  return files.map(f => {
-    const isSignedFile = /_signed\.pdf$/i.test(f.name);
-    const hasSignedCopy = signedBase.has(f.name.toLowerCase());
-    return {...f, isSignedFile, hasSignedCopy, status: isSignedFile || hasSignedCopy ? "signed" : "unsigned"};
-  });
+async function listPdfInFolder(folderId){
+  let all = []; let pageToken;
+  do{
+    const res = await gapi.client.drive.files.list({
+      q: `'${folderId}' in parents and mimeType='application/pdf' and trashed=false`,
+      fields: "nextPageToken, files(id,name,mimeType,modifiedTime,size,webViewLink,parents)",
+      orderBy: "modifiedTime desc",
+      pageSize: 100,
+      pageToken,
+      supportsAllDrives: true,
+      includeItemsFromAllDrives: true
+    });
+    all = all.concat(res.result.files || []);
+    pageToken = res.result.nextPageToken;
+  }while(pageToken);
+  return all;
 }
+
+async function ensureSignedFolder(){
+  if(signedFolderId) return signedFolderId;
+  const folderName = CONFIG.SIGNED_FOLDER_NAME || "02_Signed_PDF";
+  const safeName = folderName.replace(/'/g, "\'");
+  const res = await gapi.client.drive.files.list({
+    q: `'${CONFIG.FOLDER_ID}' in parents and name='${safeName}' and mimeType='application/vnd.google-apps.folder' and trashed=false`,
+    fields: "files(id,name)",
+    pageSize: 10,
+    supportsAllDrives: true,
+    includeItemsFromAllDrives: true
+  });
+  const found = res.result.files || [];
+  if(found.length) return found[0].id;
+
+  const createRes = await fetch("https://www.googleapis.com/drive/v3/files?supportsAllDrives=true", {
+    method: "POST",
+    headers: { Authorization: `Bearer ${accessToken}`, "Content-Type": "application/json" },
+    body: JSON.stringify({
+      name: folderName,
+      mimeType: "application/vnd.google-apps.folder",
+      parents: [CONFIG.FOLDER_ID]
+    })
+  });
+  if(!createRes.ok) throw new Error(await createRes.text());
+  const folder = await createRes.json();
+  return folder.id;
+}
+
+function mapStatus(originals, signed){
+  const signedBase = new Set(signed.map(f=>normalizeSignedName(f.name)));
+  const signedRows = signed.map(f => ({...f, isSignedFile: true, hasSignedCopy: true, status: "signed", folderType: "signed"}));
+  const originalRows = originals
+    .filter(f => !/_signed\.pdf$/i.test(f.name))
+    .map(f => ({
+      ...f,
+      isSignedFile: false,
+      hasSignedCopy: signedBase.has(normalizeOriginalName(f.name)),
+      status: signedBase.has(normalizeOriginalName(f.name)) ? "signed" : "unsigned",
+      folderType: "original"
+    }));
+  return [...originalRows, ...signedRows];
+}
+function normalizeOriginalName(name){ return name.replace(/\.pdf$/i, "").toLowerCase(); }
+function normalizeSignedName(name){ return name.replace(/_signed\.pdf$/i, "").replace(/\.pdf$/i, "").toLowerCase(); }
 function getOriginalFiles(){ return pdfFiles.filter(f=>!f.isSignedFile); }
 function clearSearch(){
   els.searchInput.value = "";
@@ -247,6 +293,7 @@ async function saveSignedPdf(){
     if(els.signaturePosition.value === "center"){ x = (width - sigW)/2; y = (height - sigH)/2; }
     page.drawImage(png, { x, y, width: sigW, height: sigH });
     const signedBytes = await doc.save();
+    if(!signedFolderId) signedFolderId = await ensureSignedFolder();
     const outName = currentFile.name.replace(/\.pdf$/i, "") + "_signed.pdf";
     await uploadToDrive(outName, signedBytes);
     signaturePad.clear(); toast("บันทึก PDF ที่เซ็นแล้วสำเร็จ");
@@ -256,7 +303,7 @@ async function saveSignedPdf(){
 }
 async function uploadToDrive(name, bytes){
   const boundary = "canenext_boundary_" + Date.now();
-  const metadata = { name, mimeType: "application/pdf", parents: [CONFIG.FOLDER_ID] };
+  const metadata = { name, mimeType: "application/pdf", parents: [signedFolderId || CONFIG.FOLDER_ID] };
   const body = new Blob([
     `--${boundary}\r\nContent-Type: application/json; charset=UTF-8\r\n\r\n${JSON.stringify(metadata)}\r\n`,
     `--${boundary}\r\nContent-Type: application/pdf\r\n\r\n`,
