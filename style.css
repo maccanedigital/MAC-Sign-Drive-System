@@ -422,3 +422,221 @@ body:before{
   #summaryPage .zone-overview-cards{grid-template-columns:repeat(2,minmax(0,1fr)) !important;}
   #summaryPage .zone-header{align-items:flex-start !important;flex-direction:column !important;}
 }
+
+/* Summary Dashboard v3: compact all-zone overview */
+#summaryPage{
+  --summary-gap:8px;
+}
+#summaryPage .summary-hero{
+  padding:10px 12px !important;
+  min-height:0 !important;
+  grid-template-columns:1fr 220px !important;
+  margin-bottom:8px !important;
+}
+#summaryPage .summary-icon-main{
+  width:36px !important;
+  height:36px !important;
+  min-width:36px !important;
+  font-size:19px !important;
+  border-radius:12px !important;
+}
+#summaryPage .summary-title h2{font-size:19px !important;}
+#summaryPage .summary-title p{font-size:12px !important;}
+#summaryPage .overall-progress{padding:9px 10px !important;border-radius:14px !important;}
+#summaryPage .overall-percent{font-size:24px !important;}
+#summaryPage .overall-label{font-size:10px !important;}
+#summaryPage .overall-bar{height:6px !important;}
+#summaryPage .summary-cards{
+  grid-template-columns:repeat(3,minmax(0,1fr)) !important;
+  gap:8px !important;
+  margin:8px 0 !important;
+}
+#summaryPage .summary-card{
+  min-height:64px !important;
+  padding:9px 12px !important;
+  border-radius:16px !important;
+  grid-template-columns:34px 1fr !important;
+  column-gap:9px !important;
+}
+#summaryPage .summary-card .card-icon{
+  width:34px !important;
+  height:34px !important;
+  min-width:34px !important;
+  font-size:18px !important;
+  border-radius:12px !important;
+}
+#summaryPage .summary-card .card-label{font-size:11px !important;}
+#summaryPage .summary-card strong{font-size:22px !important;}
+#summaryPage .zone-panel{
+  padding:10px !important;
+  border-radius:16px !important;
+}
+#summaryPage .zone-header{
+  margin-bottom:6px !important;
+  padding-bottom:5px !important;
+}
+#summaryPage .zone-title-icon{
+  width:30px !important;
+  height:30px !important;
+  min-width:30px !important;
+  font-size:16px !important;
+  border-radius:10px !important;
+}
+#summaryPage .zone-header h2{font-size:15.5px !important;}
+#summaryPage .zone-note{display:none !important;}
+#summaryPage .zone-legend{font-size:10px !important;padding:4px 8px !important;}
+#summaryPage .zone-overview-cards{
+  display:grid !important;
+  grid-template-columns:repeat(13,minmax(62px,1fr)) !important;
+  gap:5px !important;
+  margin:4px 0 8px !important;
+}
+#summaryPage .zone-mini-card{
+  min-height:70px !important;
+  padding:6px 6px !important;
+  border-radius:12px !important;
+  box-shadow:0 4px 10px rgba(16,36,60,.055) !important;
+}
+#summaryPage .zone-mini-card::before{width:3px !important;}
+#summaryPage .zone-mini-top{
+  margin-bottom:3px !important;
+  gap:3px !important;
+}
+#summaryPage .zone-mini-code{
+  font-size:13px !important;
+  line-height:1 !important;
+}
+#summaryPage .zone-mini-percent{
+  font-size:9px !important;
+  padding:1px 4px !important;
+  border-radius:999px !important;
+}
+#summaryPage .zone-mini-stats{
+  grid-template-columns:1fr !important;
+  gap:1px !important;
+  font-size:9px !important;
+  line-height:1 !important;
+}
+#summaryPage .zone-mini-stats span{
+  flex-direction:row !important;
+  justify-content:space-between !important;
+  align-items:center !important;
+  white-space:nowrap !important;
+}
+#summaryPage .zone-mini-stats span::first-letter{font-weight:900;}
+#summaryPage .zone-mini-stats b{
+  font-size:11px !important;
+  line-height:1 !important;
+}
+#summaryPage .zone-mini-bar{
+  height:4px !important;
+  margin-top:4px !important;
+}
+#summaryPage .compact-zone-table-wrap{
+  max-height:172px !important;
+  overflow:auto !important;
+  border-radius:12px !important;
+}
+#summaryPage .compact-zone-table th,
+#summaryPage .compact-zone-table td{
+  padding:4px 7px !important;
+  font-size:10.5px !important;
+  line-height:1 !important;
+}
+#summaryPage .compact-zone-table tbody tr{height:24px !important;}
+#summaryPage .compact-zone-table .zone-avatar{
+  width:20px !important;
+  height:20px !important;
+  font-size:9px !important;
+  border-radius:7px !important;
+}
+#summaryPage .compact-zone-table .zone-link{padding:1px 5px !important;gap:4px !important;font-size:10.5px !important;}
+#summaryPage .compact-zone-table .progress-cell{grid-template-columns:1fr 38px !important;gap:5px !important;}
+#summaryPage .compact-zone-table .progress-bar{height:5px !important;}
+#summaryPage .unsigned-panel{
+  margin-top:8px !important;
+  padding:9px 10px !important;
+  border-radius:16px !important;
+}
+#summaryPage .unsigned-head{margin-bottom:5px !important;padding-bottom:4px !important;}
+#summaryPage .unsigned-head h2{font-size:14px !important;}
+#summaryPage #unsignedList{max-height:145px !important;}
+@media(max-width:1280px){
+  #summaryPage .zone-overview-cards{grid-template-columns:repeat(7,minmax(82px,1fr)) !important;}
+}
+@media(max-width:760px){
+  #summaryPage .summary-hero{grid-template-columns:1fr !important;}
+  #summaryPage .summary-cards{grid-template-columns:1fr !important;}
+  #summaryPage .zone-overview-cards{grid-template-columns:repeat(3,minmax(0,1fr)) !important;}
+}
+
+
+/* === Summary redesign FINAL: compact all-zone overview, no long explanation === */
+#summaryPage .summary-hero{
+  padding:10px 14px!important;
+  margin-bottom:8px!important;
+  display:grid!important;
+  grid-template-columns:1fr 210px!important;
+  gap:10px!important;
+  border-radius:16px!important;
+}
+#summaryPage .summary-icon-main{width:36px!important;height:36px!important;min-width:36px!important;font-size:19px!important;border-radius:12px!important}
+#summaryPage .summary-title h2{font-size:18px!important;line-height:1.1!important}
+#summaryPage .summary-title p{display:none!important}
+#summaryPage .overall-progress{padding:7px 9px!important;border-radius:13px!important;min-width:0!important}
+#summaryPage .overall-percent{font-size:23px!important}
+#summaryPage .overall-label{font-size:10px!important;margin:1px 0 4px!important}
+#summaryPage .overall-bar{height:5px!important;margin-top:4px!important}
+#summaryPage .summary-cards{
+  display:grid!important;
+  grid-template-columns:repeat(3,minmax(0,1fr))!important;
+  gap:8px!important;
+  margin:8px 0!important;
+}
+#summaryPage .summary-card{
+  min-height:54px!important;
+  padding:8px 12px!important;
+  border-radius:14px!important;
+  grid-template-columns:30px 1fr auto!important;
+  gap:8px!important;
+}
+#summaryPage .summary-card .card-icon{width:30px!important;height:30px!important;font-size:16px!important;border-radius:10px!important}
+#summaryPage .summary-card .card-label{font-size:11px!important;white-space:nowrap!important;overflow:hidden!important;text-overflow:ellipsis!important}
+#summaryPage .summary-card strong{font-size:22px!important}
+#summaryPage .zone-panel{padding:10px!important;margin:0!important;border-radius:16px!important}
+#summaryPage .zone-header{margin-bottom:8px!important;padding-bottom:0!important}
+#summaryPage .zone-title-icon{width:30px!important;height:30px!important;min-width:30px!important;font-size:16px!important;border-radius:10px!important}
+#summaryPage .zone-header h2{font-size:16px!important}
+#summaryPage .zone-legend{font-size:10px!important;padding:4px 8px!important}
+#summaryPage .zone-overview-cards{
+  display:grid!important;
+  grid-template-columns:repeat(13,minmax(58px,1fr))!important;
+  gap:6px!important;
+  margin:6px 0 0!important;
+}
+#summaryPage .zone-mini-card{
+  min-height:68px!important;
+  padding:6px 6px 7px!important;
+  border-radius:12px!important;
+  box-shadow:0 4px 12px rgba(16,36,60,.05)!important;
+}
+#summaryPage .zone-mini-card::before{width:3px!important}
+#summaryPage .zone-mini-top{margin-bottom:4px!important}
+#summaryPage .zone-mini-code{font-size:14px!important;color:#075985!important}
+#summaryPage .zone-mini-percent{font-size:10px!important;padding:1px 4px!important}
+#summaryPage .zone-mini-stats,
+#summaryPage .zone-mini-stats.compact{
+  display:grid!important;
+  grid-template-columns:repeat(3,1fr)!important;
+  gap:2px!important;
+  font-size:10px!important;
+  line-height:1!important;
+  text-align:center!important;
+}
+#summaryPage .zone-mini-stats span{display:flex!important;flex-direction:column!important;gap:1px!important;align-items:center!important;white-space:nowrap!important}
+#summaryPage .zone-mini-stats b{font-size:12px!important;line-height:1!important}
+#summaryPage .zone-mini-bar{height:4px!important;margin-top:5px!important}
+#summaryPage .zone-table-wrap{display:none!important}
+#summaryPage .unsigned-panel{display:none!important}
+@media(max-width:1280px){#summaryPage .zone-overview-cards{grid-template-columns:repeat(7,minmax(74px,1fr))!important}}
+@media(max-width:760px){#summaryPage .summary-hero{grid-template-columns:1fr!important}#summaryPage .summary-cards{grid-template-columns:repeat(3,minmax(0,1fr))!important}#summaryPage .zone-overview-cards{grid-template-columns:repeat(4,minmax(0,1fr))!important}}

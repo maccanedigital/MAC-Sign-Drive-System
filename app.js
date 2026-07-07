@@ -391,8 +391,8 @@ function updateZoneSummary(originals){
       const percent = item.total ? (item.signed / item.total) * 100 : 0;
       const levelClass = percent >= 90 ? "level-high" : percent >= 70 ? "level-mid" : "level-low";
       return `<button class="zone-mini-card ${levelClass}" type="button" data-zone="${zone}" title="กรองเขต ${zone}">
-        <div class="zone-mini-top"><span class="zone-mini-code">เขต ${zone}</span><span class="zone-mini-percent">${percent.toFixed(0)}%</span></div>
-        <div class="zone-mini-stats"><span>ทั้งหมด <b>${item.total.toLocaleString("th-TH")}</b></span><span>เซ็นแล้ว <b>${item.signed.toLocaleString("th-TH")}</b></span><span>คงเหลือ <b>${item.unsigned.toLocaleString("th-TH")}</b></span></div>
+        <div class="zone-mini-top"><span class="zone-mini-code">${zone}</span><span class="zone-mini-percent">${percent.toFixed(0)}%</span></div>
+        <div class="zone-mini-stats compact"><span title="ทั้งหมด">📄 <b>${item.total.toLocaleString("th-TH")}</b></span><span title="เซ็นแล้ว">✅ <b>${item.signed.toLocaleString("th-TH")}</b></span><span title="คงเหลือ">⏳ <b>${item.unsigned.toLocaleString("th-TH")}</b></span></div>
         <div class="zone-mini-bar"><span style="width:${percent.toFixed(2)}%"></span></div>
       </button>`;
     }).join("");
