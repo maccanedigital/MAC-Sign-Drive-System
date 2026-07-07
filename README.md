@@ -31,3 +31,8 @@ https://maccanedigital.github.io
 ```text
 https://www.googleapis.com/auth/drive
 ```
+
+
+## อัปเดตล่าสุด
+- ลายเซ็นจะถูกฝังอัตโนมัติที่มุมขวาล่างของหน้าสุดท้ายของ PDF
+- ไฟล์ที่เซ็นแล้วจะถูกบันทึกในโฟลเดอร์ 02_Signed_PDF
