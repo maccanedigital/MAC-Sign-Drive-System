@@ -23,7 +23,7 @@ let currentViewMode = "view";
 const $ = (id) => document.getElementById(id);
 const els = {
   loginBtn: $("loginBtn"), logoutBtn: $("logoutBtn"), userStatus: $("userStatus"),
-  loadFilesBtn: $("loadFilesBtn"), refreshFilesBtn: $("refreshFilesBtn"), searchInput: $("searchInput"), clearSearchBtn: $("clearSearchBtn"), statusFilter: $("statusFilter"), zoneFilter: $("zoneFilter"), fileListInfo: $("fileListInfo"), tabAllCount: $("tabAllCount"), tabSignedCount: $("tabSignedCount"), tabUnsignedCount: $("tabUnsignedCount"),
+  loadFilesBtn: $("loadFilesBtn"), refreshFilesBtn: $("refreshFilesBtn"), searchInput: $("searchInput"), clearSearchBtn: $("clearSearchBtn"), statusFilter: $("statusFilter"), zoneFilter: $("zoneFilter"), subZoneFilter: $("subZoneFilter"), fileListInfo: $("fileListInfo"), tabAllCount: $("tabAllCount"), tabSignedCount: $("tabSignedCount"), tabUnsignedCount: $("tabUnsignedCount"),
   fileList: $("fileList"), currentFileName: $("currentFileName"), docStatus: $("docStatus"),
   pdfCanvas: $("pdfCanvas"), signatureCanvas: $("signatureCanvas"), prevPageBtn: $("prevPageBtn"),
   nextPageBtn: $("nextPageBtn"), pageInfo: $("pageInfo"), signPageInput: $("signPageInput"),
@@ -47,7 +47,8 @@ function bindEvents(){
   els.searchInput.addEventListener("input", renderFiles);
   els.clearSearchBtn.addEventListener("click", clearSearch);
   if(els.statusFilter) els.statusFilter.addEventListener("change", () => { activeDocStatus = els.statusFilter.value; updateDocFilterTabs(); renderFiles(); });
-  if(els.zoneFilter) els.zoneFilter.addEventListener("change", renderFiles);
+  if(els.zoneFilter) els.zoneFilter.addEventListener("change", () => { updateSubZoneOptions(); renderFiles(); });
+  if(els.subZoneFilter) els.subZoneFilter.addEventListener("change", renderFiles);
   document.querySelectorAll(".doc-filter").forEach(btn => btn.addEventListener("click", () => {
     activeDocStatus = btn.dataset.status;
     if(els.statusFilter) els.statusFilter.value = activeDocStatus;
@@ -177,7 +178,7 @@ async function loadFiles(){
     originalFiles = await listPdfInFolder(CONFIG.FOLDER_ID);
     signedFiles = await listPdfInFolder(signedFolderId);
     pdfFiles = mapStatus(originalFiles, signedFiles);
-    renderFiles(); updateSummary();
+    updateSubZoneOptions(); renderFiles(); updateSummary();
     toast(`ดึงไฟล์ PDF สำเร็จ ${getOriginalFiles().length} ไฟล์ | เซ็นแล้ว ${getOriginalFiles().filter(f=>f.hasSignedCopy).length} ไฟล์`);
   }catch(err){
     console.error(err);
@@ -282,6 +283,8 @@ function getOriginalFiles(){ return pdfFiles.filter(f=>!f.isSignedFile); }
 function clearSearch(){
   els.searchInput.value = "";
   if(els.zoneFilter) els.zoneFilter.value = "all";
+  if(els.subZoneFilter) els.subZoneFilter.value = "all";
+  updateSubZoneOptions();
   activeDocStatus = "all";
   if(els.statusFilter) els.statusFilter.value = "all";
   updateDocFilterTabs();
@@ -292,12 +295,31 @@ function clearSearch(){
 function getBaseFilteredOriginals(){
   const q = els.searchInput.value.trim().toLowerCase();
   const zone = els.zoneFilter ? els.zoneFilter.value : "all";
+  const subZone = els.subZoneFilter ? els.subZoneFilter.value : "all";
   return getOriginalFiles().filter(f => {
     const matchText = !q || f.name.toLowerCase().includes(q);
     const fileZone = getZoneCode(f.name);
+    const fileSubZone = getSubZoneCode(f.name);
     const matchZone = zone === "all" || fileZone === zone;
-    return matchText && matchZone;
+    const matchSubZone = subZone === "all" || fileSubZone === subZone;
+    return matchText && matchZone && matchSubZone;
   });
+}
+
+function updateSubZoneOptions(){
+  if(!els.subZoneFilter) return;
+  const current = els.subZoneFilter.value || "all";
+  const zone = els.zoneFilter ? els.zoneFilter.value : "all";
+  const subZones = Array.from(new Set(
+    getOriginalFiles()
+      .filter(f => zone === "all" || getZoneCode(f.name) === zone)
+      .map(f => getSubZoneCode(f.name))
+      .filter(Boolean)
+  )).sort((a,b)=>a.localeCompare(b, "th"));
+
+  els.subZoneFilter.innerHTML = `<option value="all">ทุกเขตย่อย</option>` +
+    subZones.map(sz => `<option value="${escapeHtml(sz)}">เขตย่อย ${escapeHtml(sz)}</option>`).join("");
+  els.subZoneFilter.value = subZones.includes(current) ? current : "all";
 }
 
 function filteredFiles(){
@@ -327,10 +349,12 @@ function renderFiles(){
   updateDocFilterCounts();
   const files = filteredFiles();
   const zone = els.zoneFilter ? els.zoneFilter.value : "all";
+  const subZone = els.subZoneFilter ? els.subZoneFilter.value : "all";
   const zoneText = zone === "all" ? "ทุกเขต" : `เขต ${zone}`;
+  const subZoneText = subZone === "all" ? "ทุกเขตย่อย" : `เขตย่อย ${subZone}`;
   if(els.fileListInfo){
     const baseCount = getBaseFilteredOriginals().length;
-    els.fileListInfo.textContent = `แสดง: ${statusLabel(activeDocStatus)} · ${zoneText} · พบ ${files.length.toLocaleString("th-TH")} รายการ จาก ${baseCount.toLocaleString("th-TH")} รายการในเงื่อนไขเขต/คำค้นหา`;
+    els.fileListInfo.textContent = `แสดง: ${statusLabel(activeDocStatus)} · ${zoneText} · ${subZoneText} · พบ ${files.length.toLocaleString("th-TH")} รายการ จาก ${baseCount.toLocaleString("th-TH")} รายการในเงื่อนไขเขต/เขตย่อย/คำค้นหา`;
   }
   if(!files.length){ els.fileList.className="file-list empty"; els.fileList.textContent="ไม่พบไฟล์ PDF ตามเงื่อนไขที่เลือก"; return; }
   els.fileList.className="file-list"; els.fileList.innerHTML = "";
@@ -340,7 +364,7 @@ function renderFiles(){
     const versionText = f.hasSignedCopy ? `<span class="meta-chip"><span class="mini-icon">v</span>Version ${f.signedVersion}</span>` : "";
     const primaryText = f.hasSignedCopy ? "ดู PDF ที่เซ็นแล้ว" : "เซ็นเอกสาร";
     const secondaryBtn = f.hasSignedCopy ? `<button class="file-action edit-signature" type="button">แก้ไขลายเซ็น</button>` : "";
-    item.innerHTML = `<div class="file-row"><div class="file-icon pdf">PDF</div><div class="file-body"><div class="file-name">${escapeHtml(f.name)}</div><div class="file-meta"><span class="badge ${f.status}"><span class="mini-icon">${f.status === 'signed' ? '✓' : '⌛'}</span>${f.status === 'signed' ? 'เซ็นแล้ว' : 'ยังไม่เซ็น'}</span>${versionText}<span class="meta-chip"><span class="mini-icon">⌂</span>เขต ${escapeHtml(getZoneCode(f.name))}</span><span class="meta-chip"><span class="mini-icon">◷</span>${formatDate(f.modifiedTime)}</span></div><div class="file-actions"><button class="file-action view-pdf" type="button">${primaryText}</button>${secondaryBtn}</div></div><div class="open-icon">›</div></div>`;
+    item.innerHTML = `<div class="file-row"><div class="file-icon pdf">PDF</div><div class="file-body"><div class="file-name">${escapeHtml(f.name)}</div><div class="file-meta"><span class="badge ${f.status}"><span class="mini-icon">${f.status === 'signed' ? '✓' : '⌛'}</span>${f.status === 'signed' ? 'เซ็นแล้ว' : 'ยังไม่เซ็น'}</span>${versionText}<span class="meta-chip"><span class="mini-icon">⌂</span>เขต ${escapeHtml(getZoneCode(f.name))}</span><span class="meta-chip"><span class="mini-icon">▣</span>เขตย่อย ${escapeHtml(getSubZoneCode(f.name))}</span><span class="meta-chip"><span class="mini-icon">◷</span>${formatDate(f.modifiedTime)}</span></div><div class="file-actions"><button class="file-action view-pdf" type="button">${primaryText}</button>${secondaryBtn}</div></div><div class="open-icon">›</div></div>`;
     item.addEventListener("click", () => openFile(f, { mode: f.hasSignedCopy ? "view-signed" : "sign" }));
     item.querySelector(".view-pdf").addEventListener("click", (ev) => { ev.stopPropagation(); openFile(f, { mode: f.hasSignedCopy ? "view-signed" : "sign" }); });
     const editBtn = item.querySelector(".edit-signature");
@@ -363,12 +387,22 @@ function updateSummary(){
   updateZoneSummary(originals);
   const list = originals.filter(f=>!f.hasSignedCopy);
   if(!list.length){ els.unsignedList.className="file-list empty"; els.unsignedList.textContent="ไม่มีไฟล์คงเหลือ"; return; }
-  els.unsignedList.className="file-list compact-list"; els.unsignedList.innerHTML = list.map(f=>`<div class="file-item unsigned-summary-item"><div class="file-row"><div class="file-icon pdf">PDF</div><div class="file-body"><div class="file-name">${escapeHtml(f.name)}</div><div class="file-meta"><span class="badge unsigned"><span class="mini-icon">⌛</span>ยังไม่เซ็น</span><span class="meta-chip"><span class="mini-icon">📍</span>เขต ${escapeHtml(getZoneCode(f.name))}</span><span class="meta-chip"><span class="mini-icon">◷</span>${formatDate(f.modifiedTime)}</span></div></div></div></div>`).join("");
+  els.unsignedList.className="file-list compact-list"; els.unsignedList.innerHTML = list.map(f=>`<div class="file-item unsigned-summary-item"><div class="file-row"><div class="file-icon pdf">PDF</div><div class="file-body"><div class="file-name">${escapeHtml(f.name)}</div><div class="file-meta"><span class="badge unsigned"><span class="mini-icon">⌛</span>ยังไม่เซ็น</span><span class="meta-chip"><span class="mini-icon">📍</span>เขต ${escapeHtml(getZoneCode(f.name))}</span><span class="meta-chip"><span class="mini-icon">▣</span>เขตย่อย ${escapeHtml(getSubZoneCode(f.name))}</span><span class="meta-chip"><span class="mini-icon">◷</span>${formatDate(f.modifiedTime)}</span></div></div></div></div>`).join("");
 }
 
 function getZoneCode(filename){
   const match = String(filename || "").trim().match(/^(\d{2})/);
   return match ? match[1] : "ไม่ระบุ";
+}
+
+function getSubZoneCode(filename){
+  const raw = String(filename || "").trim();
+  // อ้างอิงตัวอักษรลำดับที่ 4 ถึง 7 ของชื่อไฟล์ เช่น 01_1234_xxx.pdf → 1234
+  if(raw.length >= 7){
+    const code = raw.substring(3, 7);
+    return code || "ไม่ระบุ";
+  }
+  return "ไม่ระบุ";
 }
 
 function updateZoneSummary(originals){
@@ -418,6 +452,8 @@ function filterByZone(zone){
   switchPage("documents");
   els.searchInput.value = "";
   if(els.zoneFilter) els.zoneFilter.value = zone || "all";
+  updateSubZoneOptions();
+  if(els.subZoneFilter) els.subZoneFilter.value = "all";
   activeDocStatus = "all";
   if(els.statusFilter) els.statusFilter.value = "all";
   updateDocFilterTabs();
