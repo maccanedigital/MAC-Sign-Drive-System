@@ -108,15 +108,51 @@
     </section>
 
     <section id="summaryPage" class="page">
+      <div class="summary-hero panel">
+        <div class="summary-title">
+          <div class="summary-icon-main">📊</div>
+          <div>
+            <h2>สรุปสถานะเอกสาร</h2>
+            <p id="summaryHint">ภาพรวมความก้าวหน้าการลงลายเซ็น PDF</p>
+          </div>
+        </div>
+        <div class="overall-progress">
+          <div class="overall-percent" id="completionPercent">0%</div>
+          <div class="overall-label">ความก้าวหน้ารวม</div>
+          <div class="overall-bar"><span id="completionBar" style="width:0%"></span></div>
+        </div>
+      </div>
+
       <div class="summary-cards">
-        <div class="summary-card"><div>ไฟล์ต้นฉบับทั้งหมด</div><strong id="totalCount">0</strong></div>
-        <div class="summary-card"><div>เซ็นแล้ว</div><strong id="signedCount">0</strong></div>
-        <div class="summary-card"><div>คงเหลือ</div><strong id="unsignedCount">0</strong></div>
+        <div class="summary-card total-card">
+          <div class="card-icon">📄</div>
+          <div class="card-label">ไฟล์ต้นฉบับทั้งหมด</div>
+          <strong id="totalCount">0</strong>
+        </div>
+        <div class="summary-card signed-card">
+          <div class="card-icon">✅</div>
+          <div class="card-label">เซ็นแล้ว</div>
+          <strong id="signedCount">0</strong>
+        </div>
+        <div class="summary-card unsigned-card">
+          <div class="card-icon">⏳</div>
+          <div class="card-label">คงเหลือ</div>
+          <strong id="unsignedCount">0</strong>
+        </div>
       </div>
       <div class="panel zone-panel">
         <div class="zone-header">
-          <h2>สรุปสถานะเอกสารแยกรายเขต</h2>
-          <span class="zone-note">อ้างอิงจากตัวเลข 2 ตัวแรกของชื่อไฟล์</span>
+          <div class="zone-title-wrap">
+            <div class="zone-title-icon">🗂️</div>
+            <div>
+              <h2>สรุปสถานะเอกสารแยกรายเขต</h2>
+              <span class="zone-note">อ้างอิงจากตัวเลข 2 ตัวแรกของชื่อไฟล์</span>
+            </div>
+          </div>
+          <div class="zone-legend">
+            <span><i class="legend-dot done"></i> เซ็นแล้ว</span>
+            <span><i class="legend-dot wait"></i> คงเหลือ</span>
+          </div>
         </div>
         <div class="zone-table-wrap">
           <table class="zone-table">
@@ -136,8 +172,14 @@
         </div>
       </div>
 
-      <div class="panel">
-        <h2>รายการที่ยังไม่เซ็น</h2>
+      <div class="panel unsigned-panel">
+        <div class="unsigned-head">
+          <div>
+            <h2>⏳ รายการที่ยังไม่เซ็น</h2>
+            <p>คลิกเขตในตารางด้านบนเพื่อกรองรายการเอกสาร</p>
+          </div>
+          <button class="btn ghost" type="button" onclick="filterByZone('all')">แสดงทุกเขต</button>
+        </div>
         <div id="unsignedList" class="file-list empty">ยังไม่มีข้อมูล</div>
       </div>
     </section>

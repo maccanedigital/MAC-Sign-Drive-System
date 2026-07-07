@@ -28,7 +28,7 @@ const els = {
   pdfCanvas: $("pdfCanvas"), signatureCanvas: $("signatureCanvas"), prevPageBtn: $("prevPageBtn"),
   nextPageBtn: $("nextPageBtn"), pageInfo: $("pageInfo"), signPageInput: $("signPageInput"),
   signaturePosition: $("signaturePosition"), clearSigBtn: $("clearSigBtn"), saveSignedBtn: $("saveSignedBtn"),
-  totalCount: $("totalCount"), signedCount: $("signedCount"), unsignedCount: $("unsignedCount"), unsignedList: $("unsignedList"), zoneSummaryBody: $("zoneSummaryBody"), toast: $("toast")
+  totalCount: $("totalCount"), signedCount: $("signedCount"), unsignedCount: $("unsignedCount"), completionPercent: $("completionPercent"), completionBar: $("completionBar"), summaryHint: $("summaryHint"), unsignedList: $("unsignedList"), zoneSummaryBody: $("zoneSummaryBody"), toast: $("toast")
 };
 
 window.addEventListener("load", () => {
@@ -352,14 +352,18 @@ function updateSummary(){
   const originals = getOriginalFiles();
   const signed = originals.filter(f=>f.hasSignedCopy).length;
   const unsigned = originals.length - signed;
-  els.totalCount.textContent = originals.length;
-  els.signedCount.textContent = signed;
-  els.unsignedCount.textContent = unsigned;
+  const percent = originals.length ? (signed / originals.length) * 100 : 0;
+  els.totalCount.textContent = originals.length.toLocaleString("th-TH");
+  els.signedCount.textContent = signed.toLocaleString("th-TH");
+  els.unsignedCount.textContent = unsigned.toLocaleString("th-TH");
+  if(els.completionPercent) els.completionPercent.textContent = `${percent.toFixed(2)}%`;
+  if(els.completionBar) els.completionBar.style.width = `${percent.toFixed(2)}%`;
+  if(els.summaryHint) els.summaryHint.textContent = originals.length ? `เซ็นแล้ว ${signed.toLocaleString("th-TH")} จาก ${originals.length.toLocaleString("th-TH")} ไฟล์` : "กดดึงไฟล์ PDF เพื่อดูภาพรวมความก้าวหน้า";
   updateDocFilterCounts();
   updateZoneSummary(originals);
   const list = originals.filter(f=>!f.hasSignedCopy);
   if(!list.length){ els.unsignedList.className="file-list empty"; els.unsignedList.textContent="ไม่มีไฟล์คงเหลือ"; return; }
-  els.unsignedList.className="file-list"; els.unsignedList.innerHTML = list.map(f=>`<div class="file-item"><div class="file-row"><div class="file-icon pdf">PDF</div><div class="file-body"><div class="file-name">${escapeHtml(f.name)}</div><div class="file-meta"><span class="badge unsigned"><span class="mini-icon">⌛</span>ยังไม่เซ็น</span><span class="meta-chip"><span class="mini-icon">⌂</span>เขต ${escapeHtml(getZoneCode(f.name))}</span></div></div></div></div>`).join("");
+  els.unsignedList.className="file-list compact-list"; els.unsignedList.innerHTML = list.map(f=>`<div class="file-item unsigned-summary-item"><div class="file-row"><div class="file-icon pdf">PDF</div><div class="file-body"><div class="file-name">${escapeHtml(f.name)}</div><div class="file-meta"><span class="badge unsigned"><span class="mini-icon">⌛</span>ยังไม่เซ็น</span><span class="meta-chip"><span class="mini-icon">📍</span>เขต ${escapeHtml(getZoneCode(f.name))}</span><span class="meta-chip"><span class="mini-icon">◷</span>${formatDate(f.modifiedTime)}</span></div></div></div></div>`).join("");
 }
 
 function getZoneCode(filename){
@@ -385,10 +389,10 @@ function updateZoneSummary(originals){
     const percent = item.total ? (item.signed / item.total) * 100 : 0;
     return `
       <tr class="zone-row" data-zone="${zone}">
-        <td><button class="zone-link" type="button" data-zone="${zone}">เขต ${zone}</button></td>
-        <td>${item.total.toLocaleString("th-TH")}</td>
-        <td>${item.signed.toLocaleString("th-TH")}</td>
-        <td>${item.unsigned.toLocaleString("th-TH")}</td>
+        <td><button class="zone-link" type="button" data-zone="${zone}"><span class="zone-avatar">${zone}</span><span>เขต ${zone}</span></button></td>
+        <td><span class="table-count total">${item.total.toLocaleString("th-TH")}</span></td>
+        <td><span class="table-count signed">✅ ${item.signed.toLocaleString("th-TH")}</span></td>
+        <td><span class="table-count unsigned">⏳ ${item.unsigned.toLocaleString("th-TH")}</span></td>
         <td>
           <div class="progress-cell">
             <div class="progress-bar"><span style="width:${percent.toFixed(2)}%"></span></div>
@@ -404,10 +408,10 @@ function updateZoneSummary(originals){
     const percent = item.total ? (item.signed / item.total) * 100 : 0;
     rows.push(`
       <tr class="zone-row" data-zone="${escapeHtml(zone)}">
-        <td><button class="zone-link" type="button" data-zone="${escapeHtml(zone)}">${escapeHtml(zone)}</button></td>
-        <td>${item.total.toLocaleString("th-TH")}</td>
-        <td>${item.signed.toLocaleString("th-TH")}</td>
-        <td>${item.unsigned.toLocaleString("th-TH")}</td>
+        <td><button class="zone-link" type="button" data-zone="${escapeHtml(zone)}"><span class="zone-avatar">?</span><span>${escapeHtml(zone)}</span></button></td>
+        <td><span class="table-count total">${item.total.toLocaleString("th-TH")}</span></td>
+        <td><span class="table-count signed">✅ ${item.signed.toLocaleString("th-TH")}</span></td>
+        <td><span class="table-count unsigned">⏳ ${item.unsigned.toLocaleString("th-TH")}</span></td>
         <td>
           <div class="progress-cell">
             <div class="progress-bar"><span style="width:${percent.toFixed(2)}%"></span></div>
