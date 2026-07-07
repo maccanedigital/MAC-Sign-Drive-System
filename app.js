@@ -47,8 +47,8 @@ function bindEvents(){
   els.searchInput.addEventListener("input", renderFiles);
   els.clearSearchBtn.addEventListener("click", clearSearch);
   if(els.statusFilter) els.statusFilter.addEventListener("change", () => { activeDocStatus = els.statusFilter.value; updateDocFilterTabs(); renderFiles(); });
-  if(els.zoneFilter) els.zoneFilter.addEventListener("change", () => { updateSubZoneOptions(); renderFiles(); });
-  if(els.subZoneFilter) els.subZoneFilter.addEventListener("change", renderFiles);
+  if(els.zoneFilter) els.zoneFilter.addEventListener("change", () => { updateSubZoneOptions(); renderFiles(); updateSummary(); });
+  if(els.subZoneFilter) els.subZoneFilter.addEventListener("change", () => { renderFiles(); updateSummary(); });
   document.querySelectorAll(".doc-filter").forEach(btn => btn.addEventListener("click", () => {
     activeDocStatus = btn.dataset.status;
     if(els.statusFilter) els.statusFilter.value = activeDocStatus;
@@ -178,7 +178,8 @@ async function loadFiles(){
     originalFiles = await listPdfInFolder(CONFIG.FOLDER_ID);
     signedFiles = await listPdfInFolder(signedFolderId);
     pdfFiles = mapStatus(originalFiles, signedFiles);
-    updateSubZoneOptions(); renderFiles(); updateSummary();
+    updateSubZoneOptions();
+    renderFiles(); updateSummary();
     toast(`ดึงไฟล์ PDF สำเร็จ ${getOriginalFiles().length} ไฟล์ | เซ็นแล้ว ${getOriginalFiles().filter(f=>f.hasSignedCopy).length} ไฟล์`);
   }catch(err){
     console.error(err);
@@ -308,17 +309,14 @@ function getBaseFilteredOriginals(){
 
 function updateSubZoneOptions(){
   if(!els.subZoneFilter) return;
+  const selectedZone = els.zoneFilter ? els.zoneFilter.value : "all";
   const current = els.subZoneFilter.value || "all";
-  const zone = els.zoneFilter ? els.zoneFilter.value : "all";
-  const subZones = Array.from(new Set(
-    getOriginalFiles()
-      .filter(f => zone === "all" || getZoneCode(f.name) === zone)
-      .map(f => getSubZoneCode(f.name))
-      .filter(Boolean)
-  )).sort((a,b)=>a.localeCompare(b, "th"));
-
-  els.subZoneFilter.innerHTML = `<option value="all">ทุกเขตย่อย</option>` +
-    subZones.map(sz => `<option value="${escapeHtml(sz)}">เขตย่อย ${escapeHtml(sz)}</option>`).join("");
+  const subZones = Array.from(new Set(getOriginalFiles()
+    .filter(f => selectedZone === "all" || getZoneCode(f.name) === selectedZone)
+    .map(f => getSubZoneCode(f.name))
+    .filter(z => z && z !== "ไม่ระบุ")
+  )).sort((a,b) => a.localeCompare(b, "th"));
+  els.subZoneFilter.innerHTML = `<option value="all">ทุกเขตย่อย</option>` + subZones.map(z => `<option value="${escapeHtml(z)}">เขตย่อย ${escapeHtml(z)}</option>`).join("");
   els.subZoneFilter.value = subZones.includes(current) ? current : "all";
 }
 
@@ -364,7 +362,7 @@ function renderFiles(){
     const versionText = f.hasSignedCopy ? `<span class="meta-chip"><span class="mini-icon">v</span>Version ${f.signedVersion}</span>` : "";
     const primaryText = f.hasSignedCopy ? "ดู PDF ที่เซ็นแล้ว" : "เซ็นเอกสาร";
     const secondaryBtn = f.hasSignedCopy ? `<button class="file-action edit-signature" type="button">แก้ไขลายเซ็น</button>` : "";
-    item.innerHTML = `<div class="file-row"><div class="file-icon pdf">PDF</div><div class="file-body"><div class="file-name">${escapeHtml(f.name)}</div><div class="file-meta"><span class="badge ${f.status}"><span class="mini-icon">${f.status === 'signed' ? '✓' : '⌛'}</span>${f.status === 'signed' ? 'เซ็นแล้ว' : 'ยังไม่เซ็น'}</span>${versionText}<span class="meta-chip"><span class="mini-icon">⌂</span>เขต ${escapeHtml(getZoneCode(f.name))}</span><span class="meta-chip"><span class="mini-icon">▣</span>เขตย่อย ${escapeHtml(getSubZoneCode(f.name))}</span><span class="meta-chip"><span class="mini-icon">◷</span>${formatDate(f.modifiedTime)}</span></div><div class="file-actions"><button class="file-action view-pdf" type="button">${primaryText}</button>${secondaryBtn}</div></div><div class="open-icon">›</div></div>`;
+    item.innerHTML = `<div class="file-row"><div class="file-icon pdf">PDF</div><div class="file-body"><div class="file-name">${escapeHtml(f.name)}</div><div class="file-meta"><span class="badge ${f.status}"><span class="mini-icon">${f.status === 'signed' ? '✓' : '⌛'}</span>${f.status === 'signed' ? 'เซ็นแล้ว' : 'ยังไม่เซ็น'}</span>${versionText}<span class="meta-chip"><span class="mini-icon">⌂</span>เขต ${escapeHtml(getZoneCode(f.name))}</span><span class="meta-chip"><span class="mini-icon">▫</span>เขตย่อย ${escapeHtml(getSubZoneCode(f.name))}</span><span class="meta-chip"><span class="mini-icon">◷</span>${formatDate(f.modifiedTime)}</span></div><div class="file-actions"><button class="file-action view-pdf" type="button">${primaryText}</button>${secondaryBtn}</div></div><div class="open-icon">›</div></div>`;
     item.addEventListener("click", () => openFile(f, { mode: f.hasSignedCopy ? "view-signed" : "sign" }));
     item.querySelector(".view-pdf").addEventListener("click", (ev) => { ev.stopPropagation(); openFile(f, { mode: f.hasSignedCopy ? "view-signed" : "sign" }); });
     const editBtn = item.querySelector(".edit-signature");
@@ -387,7 +385,7 @@ function updateSummary(){
   updateZoneSummary(originals);
   const list = originals.filter(f=>!f.hasSignedCopy);
   if(!list.length){ els.unsignedList.className="file-list empty"; els.unsignedList.textContent="ไม่มีไฟล์คงเหลือ"; return; }
-  els.unsignedList.className="file-list compact-list"; els.unsignedList.innerHTML = list.map(f=>`<div class="file-item unsigned-summary-item"><div class="file-row"><div class="file-icon pdf">PDF</div><div class="file-body"><div class="file-name">${escapeHtml(f.name)}</div><div class="file-meta"><span class="badge unsigned"><span class="mini-icon">⌛</span>ยังไม่เซ็น</span><span class="meta-chip"><span class="mini-icon">📍</span>เขต ${escapeHtml(getZoneCode(f.name))}</span><span class="meta-chip"><span class="mini-icon">▣</span>เขตย่อย ${escapeHtml(getSubZoneCode(f.name))}</span><span class="meta-chip"><span class="mini-icon">◷</span>${formatDate(f.modifiedTime)}</span></div></div></div></div>`).join("");
+  els.unsignedList.className="file-list compact-list"; els.unsignedList.innerHTML = list.map(f=>`<div class="file-item unsigned-summary-item"><div class="file-row"><div class="file-icon pdf">PDF</div><div class="file-body"><div class="file-name">${escapeHtml(f.name)}</div><div class="file-meta"><span class="badge unsigned"><span class="mini-icon">⌛</span>ยังไม่เซ็น</span><span class="meta-chip"><span class="mini-icon">📍</span>เขต ${escapeHtml(getZoneCode(f.name))}</span><span class="meta-chip"><span class="mini-icon">▫</span>เขตย่อย ${escapeHtml(getSubZoneCode(f.name))}</span><span class="meta-chip"><span class="mini-icon">◷</span>${formatDate(f.modifiedTime)}</span></div></div></div></div>`).join("");
 }
 
 function getZoneCode(filename){
@@ -397,55 +395,103 @@ function getZoneCode(filename){
 
 function getSubZoneCode(filename){
   const raw = String(filename || "").trim();
-  // อ้างอิงตัวอักษรลำดับที่ 4 ถึง 7 ของชื่อไฟล์ เช่น 01_1234_xxx.pdf → 1234
+  // อ้างอิงตัวอักษรลำดับที่ 4 ถึง 7 ของชื่อไฟล์ (นับแบบ 1-based)
+  // ตัวอย่าง 01_1234_เอกสาร.pdf => เขตย่อย 1234
   if(raw.length >= 7){
     const code = raw.substring(3, 7);
-    return code || "ไม่ระบุ";
+    return code.trim() || "ไม่ระบุ";
   }
   return "ไม่ระบุ";
 }
 
 function updateZoneSummary(originals){
   if(!els.zoneSummaryBody) return;
+  const selectedZone = els.zoneFilter ? els.zoneFilter.value : "all";
+  const selectedSubZone = els.subZoneFilter ? els.subZoneFilter.value : "all";
+  const titleEl = document.getElementById("summaryTableTitle");
+  const firstColEl = document.getElementById("summaryFirstCol");
   const zoneCardsEl = document.getElementById("zoneOverviewCards");
-  const zones = Array.from({length:12}, (_, i) => String(i + 1).padStart(2, "0"));
-  const summary = Object.fromEntries(zones.map(z => [z, { total:0, signed:0, unsigned:0 }]));
+  if(zoneCardsEl) zoneCardsEl.innerHTML = "";
 
-  originals.forEach(file => {
-    const zone = getZoneCode(file.name);
-    if(!summary[zone]) summary[zone] = { total:0, signed:0, unsigned:0 };
-    summary[zone].total += 1;
-    if(file.hasSignedCopy) summary[zone].signed += 1;
-    else summary[zone].unsigned += 1;
+  // หากยังไม่เลือกเขต: แสดงสรุปรายเขต 01–12
+  // หากเลือกเขต: แสดงสรุปตามเขตย่อยของเขตนั้น
+  if(selectedZone === "all"){
+    if(titleEl) titleEl.textContent = "ตารางสรุปสถานะรายเขต 01–12";
+    if(firstColEl) firstColEl.textContent = "เขต";
+    const zones = Array.from({length:12}, (_, i) => String(i + 1).padStart(2, "0"));
+    const summary = Object.fromEntries(zones.map(z => [z, { total:0, signed:0, unsigned:0 }]));
+
+    originals.forEach(file => {
+      const zone = getZoneCode(file.name);
+      if(!summary[zone]) return; // ตารางนี้แสดงเฉพาะ 01–12
+      if(selectedSubZone !== "all" && getSubZoneCode(file.name) !== selectedSubZone) return;
+      summary[zone].total += 1;
+      if(file.hasSignedCopy) summary[zone].signed += 1;
+      else summary[zone].unsigned += 1;
+    });
+
+    const rows = zones.map(zone => renderSummaryRow({
+      key: zone,
+      label: `เขต ${zone}`,
+      data: summary[zone],
+      onClickAttr: `data-zone="${zone}"`,
+      buttonClass: "zone-link",
+      avatarClass: "zone-avatar"
+    }));
+    els.zoneSummaryBody.innerHTML = rows.join("");
+    els.zoneSummaryBody.querySelectorAll(".zone-link").forEach(btn => {
+      btn.addEventListener("click", () => filterByZone(btn.dataset.zone));
+    });
+    return;
+  }
+
+  if(titleEl) titleEl.textContent = `ตารางสรุปสถานะเขตย่อยของเขต ${selectedZone}`;
+  if(firstColEl) firstColEl.textContent = "เขตย่อย";
+  const filesInZone = originals.filter(file => getZoneCode(file.name) === selectedZone);
+  const subZones = Array.from(new Set(filesInZone.map(file => getSubZoneCode(file.name)).filter(Boolean))).sort((a,b) => a.localeCompare(b, "th"));
+  const visibleSubZones = selectedSubZone === "all" ? subZones : subZones.filter(z => z === selectedSubZone);
+  if(!visibleSubZones.length){
+    els.zoneSummaryBody.innerHTML = `<tr><td colspan="5" class="empty-cell">ไม่พบข้อมูลเขตย่อยในเขต ${escapeHtml(selectedZone)}</td></tr>`;
+    return;
+  }
+  const summary = Object.fromEntries(visibleSubZones.map(z => [z, { total:0, signed:0, unsigned:0 }]));
+  filesInZone.forEach(file => {
+    const subZone = getSubZoneCode(file.name);
+    if(selectedSubZone !== "all" && subZone !== selectedSubZone) return;
+    if(!summary[subZone]) summary[subZone] = { total:0, signed:0, unsigned:0 };
+    summary[subZone].total += 1;
+    if(file.hasSignedCopy) summary[subZone].signed += 1;
+    else summary[subZone].unsigned += 1;
   });
-
-  // ตารางสรุปรายเขต 01–12 เท่านั้น: ไม่แสดงการ์ดรายเขต เพื่อให้เห็นครบทุกเขตในหน้าเดียว
-
-
-  const rows = zones.map(zone => {
-    const item = summary[zone];
-    const percent = item.total ? (item.signed / item.total) * 100 : 0;
-    return `
-      <tr class="zone-row" data-zone="${zone}">
-        <td><button class="zone-link" type="button" data-zone="${zone}"><span class="zone-avatar">${zone}</span><span>เขต ${zone}</span></button></td>
-        <td><span class="table-count total">${item.total.toLocaleString("th-TH")}</span></td>
-        <td><span class="table-count signed">${item.signed.toLocaleString("th-TH")}</span></td>
-        <td><span class="table-count unsigned">${item.unsigned.toLocaleString("th-TH")}</span></td>
-        <td>
-          <div class="progress-cell">
-            <div class="progress-bar"><span style="width:${percent.toFixed(2)}%"></span></div>
-            <strong>${percent.toFixed(2)}%</strong>
-          </div>
-        </td>
-      </tr>`;
+  els.zoneSummaryBody.innerHTML = visibleSubZones.map(subZone => renderSummaryRow({
+    key: subZone,
+    label: `เขตย่อย ${subZone}`,
+    data: summary[subZone],
+    onClickAttr: `data-subzone="${escapeHtml(subZone)}"`,
+    buttonClass: "subzone-link",
+    avatarClass: "zone-avatar subzone-avatar"
+  })).join("");
+  els.zoneSummaryBody.querySelectorAll(".subzone-link").forEach(btn => {
+    btn.addEventListener("click", () => filterBySubZone(btn.dataset.subzone));
   });
+}
 
-  // ไม่แสดงเขตอื่นนอกเหนือจาก 01–12 ในตารางสรุป
-
-  els.zoneSummaryBody.innerHTML = rows.join("");
-  els.zoneSummaryBody.querySelectorAll(".zone-link").forEach(btn => {
-    btn.addEventListener("click", () => filterByZone(btn.dataset.zone));
-  });
+function renderSummaryRow({ key, label, data, onClickAttr, buttonClass, avatarClass }){
+  const item = data || { total:0, signed:0, unsigned:0 };
+  const percent = item.total ? (item.signed / item.total) * 100 : 0;
+  return `
+    <tr class="zone-row">
+      <td><button class="${buttonClass}" type="button" ${onClickAttr}><span class="${avatarClass}">${escapeHtml(key)}</span><span>${escapeHtml(label)}</span></button></td>
+      <td><span class="table-count total">${item.total.toLocaleString("th-TH")}</span></td>
+      <td><span class="table-count signed">${item.signed.toLocaleString("th-TH")}</span></td>
+      <td><span class="table-count unsigned">${item.unsigned.toLocaleString("th-TH")}</span></td>
+      <td>
+        <div class="progress-cell">
+          <div class="progress-bar"><span style="width:${percent.toFixed(2)}%"></span></div>
+          <strong>${percent.toFixed(2)}%</strong>
+        </div>
+      </td>
+    </tr>`;
 }
 
 function filterByZone(zone){
@@ -458,7 +504,19 @@ function filterByZone(zone){
   if(els.statusFilter) els.statusFilter.value = "all";
   updateDocFilterTabs();
   renderFiles();
-  toast(`แสดงเอกสารเขต ${zone}`);
+  updateSummary();
+  toast(zone === "all" ? "แสดงเอกสารทุกเขต" : `แสดงเอกสารเขต ${zone}`);
+}
+
+function filterBySubZone(subZone){
+  switchPage("documents");
+  if(els.subZoneFilter) els.subZoneFilter.value = subZone || "all";
+  activeDocStatus = "all";
+  if(els.statusFilter) els.statusFilter.value = "all";
+  updateDocFilterTabs();
+  renderFiles();
+  updateSummary();
+  toast(subZone === "all" ? "แสดงเอกสารทุกเขตย่อย" : `แสดงเอกสารเขตย่อย ${subZone}`);
 }
 async function openFile(file, options = {}){
   const mode = options.mode || (file.hasSignedCopy ? "view-signed" : "sign");

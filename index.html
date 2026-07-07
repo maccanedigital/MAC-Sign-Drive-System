@@ -38,7 +38,6 @@
         <input id="searchInput" type="search" placeholder="ค้นหาชื่อไฟล์ PDF" />
         <select id="zoneFilter" title="กรองตามเขต">
           <option value="all">ทุกเขต</option>
-          <option value="00">เขต 00</option>
           <option value="01">เขต 01</option>
           <option value="02">เขต 02</option>
           <option value="03">เขต 03</option>
@@ -148,7 +147,7 @@
           <div class="zone-title-wrap">
             <div class="zone-title-icon">📋</div>
             <div>
-              <h2>ตารางสรุปสถานะรายเขต 01–12</h2>
+              <h2 id="summaryTableTitle">ตารางสรุปสถานะรายเขต 01–12</h2>
               
             </div>
           </div>
@@ -161,7 +160,7 @@
           <table class="zone-table compact-zone-table">
             <thead>
               <tr>
-                <th>เขต</th>
+                <th id="summaryFirstCol">เขต</th>
                 <th>ทั้งหมด</th>
                 <th>เซ็นแล้ว</th>
                 <th>ยังไม่เซ็น</th>
@@ -179,7 +178,7 @@
         <div class="unsigned-head">
           <div>
             <h2>⏳ เอกสารคงเหลือ</h2>
-            <p>คลิกเขตในตารางด้านบนเพื่อกรองรายการเอกสาร</p>
+            <p id="unsignedHint">คลิกเขตในตารางด้านบนเพื่อกรองรายการเอกสาร หรือเลือกเขตย่อยจากตัวกรอง</p>
           </div>
           <button class="btn ghost" type="button" onclick="filterByZone('all')">แสดงทุกเขต</button>
         </div>
