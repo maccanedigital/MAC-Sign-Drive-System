@@ -171,3 +171,254 @@ body:before{
 .unsigned-panel{margin-top:12px!important}.unsigned-head{padding-bottom:8px!important}.unsigned-head h2{font-size:18px!important;margin:0!important}.unsigned-head p{font-size:12px!important;margin:2px 0 0!important}
 @media(max-width:1180px){.zone-overview-cards{grid-template-columns:repeat(7,minmax(82px,1fr))}}
 @media(max-width:760px){.summary-hero{grid-template-columns:1fr!important}.summary-cards{grid-template-columns:1fr!important}.zone-overview-cards{grid-template-columns:repeat(3,minmax(0,1fr))}.compact-zone-table{min-width:620px!important}}
+
+/* === Dashboard v2: Executive compact zone overview === */
+#summaryPage{
+  --dash-gap:10px;
+}
+#summaryPage.page.active{
+  display:block;
+}
+#summaryPage .summary-hero{
+  display:grid !important;
+  grid-template-columns:1fr 260px !important;
+  align-items:center !important;
+  gap:12px !important;
+  padding:12px 16px !important;
+  margin-bottom:10px !important;
+  border-radius:18px !important;
+}
+#summaryPage .summary-title{gap:10px !important;}
+#summaryPage .summary-icon-main{
+  width:42px !important;
+  height:42px !important;
+  min-width:42px !important;
+  border-radius:14px !important;
+  font-size:22px !important;
+}
+#summaryPage .summary-title h2{
+  font-size:20px !important;
+  margin:0 !important;
+  line-height:1.15 !important;
+}
+#summaryPage .summary-title p,
+#summaryPage #summaryHint{
+  font-size:12px !important;
+  margin:2px 0 0 !important;
+}
+#summaryPage .overall-progress{
+  padding:8px 10px !important;
+  border-radius:14px !important;
+}
+#summaryPage .overall-percent{
+  font-size:26px !important;
+  line-height:1 !important;
+}
+#summaryPage .overall-label{
+  font-size:11px !important;
+  margin-top:2px !important;
+}
+#summaryPage .overall-bar{
+  height:7px !important;
+  margin-top:6px !important;
+}
+#summaryPage .summary-cards{
+  display:grid !important;
+  grid-template-columns:repeat(3, minmax(0,1fr)) !important;
+  gap:10px !important;
+  margin-bottom:10px !important;
+}
+#summaryPage .summary-card{
+  min-height:68px !important;
+  padding:10px 14px !important;
+  border-radius:16px !important;
+  display:grid !important;
+  grid-template-columns:36px 1fr auto !important;
+  align-items:center !important;
+  gap:10px !important;
+}
+#summaryPage .summary-card .card-icon{
+  width:34px !important;
+  height:34px !important;
+  border-radius:12px !important;
+  display:grid !important;
+  place-items:center !important;
+  font-size:18px !important;
+  margin:0 !important;
+}
+#summaryPage .summary-card .card-label{
+  font-size:12px !important;
+  margin:0 !important;
+  font-weight:800 !important;
+}
+#summaryPage .summary-card strong{
+  font-size:24px !important;
+  line-height:1 !important;
+  margin:0 !important;
+}
+#summaryPage .zone-panel{
+  padding:12px !important;
+  border-radius:18px !important;
+  margin-top:0 !important;
+}
+#summaryPage .zone-header{
+  display:flex !important;
+  justify-content:space-between !important;
+  align-items:center !important;
+  gap:10px !important;
+  margin-bottom:8px !important;
+  padding-bottom:7px !important;
+}
+#summaryPage .zone-title-wrap{gap:8px !important;}
+#summaryPage .zone-title-icon{
+  width:34px !important;
+  height:34px !important;
+  min-width:34px !important;
+  border-radius:12px !important;
+  font-size:18px !important;
+}
+#summaryPage .zone-header h2{
+  font-size:17px !important;
+  margin:0 !important;
+  line-height:1.15 !important;
+}
+#summaryPage .zone-note{
+  font-size:11px !important;
+  padding:0 !important;
+  background:transparent !important;
+  border:0 !important;
+  color:var(--muted) !important;
+}
+#summaryPage .zone-legend{
+  font-size:11px !important;
+  padding:5px 9px !important;
+  border-radius:999px !important;
+  white-space:nowrap !important;
+}
+#summaryPage .zone-overview-cards{
+  display:grid !important;
+  grid-template-columns:repeat(5, minmax(126px,1fr)) !important;
+  gap:8px !important;
+  margin:4px 0 10px !important;
+}
+#summaryPage .zone-mini-card{
+  min-height:82px !important;
+  padding:8px 9px !important;
+  border-radius:15px !important;
+  box-shadow:0 5px 15px rgba(16,36,60,.06) !important;
+  position:relative !important;
+  overflow:hidden !important;
+}
+#summaryPage .zone-mini-card::before{
+  content:"";
+  position:absolute;
+  left:0; top:0; bottom:0;
+  width:4px;
+  background:var(--primary-2);
+}
+#summaryPage .zone-mini-card.level-high::before{background:#16a34a;}
+#summaryPage .zone-mini-card.level-mid::before{background:#f59e0b;}
+#summaryPage .zone-mini-card.level-low::before{background:#ef4444;}
+#summaryPage .zone-mini-top{
+  margin-bottom:5px !important;
+}
+#summaryPage .zone-mini-code{
+  font-size:15px !important;
+  font-weight:1000 !important;
+}
+#summaryPage .zone-mini-percent{
+  font-size:11px !important;
+  padding:2px 6px !important;
+}
+#summaryPage .zone-mini-stats{
+  display:grid !important;
+  grid-template-columns:repeat(3, 1fr) !important;
+  gap:4px !important;
+  font-size:10px !important;
+  line-height:1.05 !important;
+  color:#6b7c90 !important;
+}
+#summaryPage .zone-mini-stats span{
+  display:flex !important;
+  flex-direction:column !important;
+  gap:1px !important;
+  min-width:0 !important;
+}
+#summaryPage .zone-mini-stats b{
+  font-size:14px !important;
+  color:#10243c !important;
+}
+#summaryPage .zone-mini-bar{
+  height:6px !important;
+  margin-top:6px !important;
+}
+#summaryPage .compact-zone-table-wrap{
+  max-height:260px !important;
+  overflow:auto !important;
+  border-radius:14px !important;
+}
+#summaryPage .compact-zone-table th,
+#summaryPage .compact-zone-table td{
+  padding:5px 8px !important;
+  font-size:11.5px !important;
+  line-height:1.05 !important;
+}
+#summaryPage .compact-zone-table .zone-avatar{
+  width:22px !important;
+  height:22px !important;
+  font-size:10px !important;
+  border-radius:8px !important;
+}
+#summaryPage .compact-zone-table .zone-link{
+  padding:2px 6px !important;
+  gap:5px !important;
+  font-size:11.5px !important;
+}
+#summaryPage .compact-zone-table .progress-cell{
+  grid-template-columns:1fr 46px !important;
+  gap:6px !important;
+}
+#summaryPage .compact-zone-table .progress-bar{
+  height:6px !important;
+}
+#summaryPage .compact-zone-table tbody tr{
+  height:30px !important;
+}
+#summaryPage .unsigned-panel{
+  margin-top:10px !important;
+  padding:10px 12px !important;
+  border-radius:18px !important;
+}
+#summaryPage .unsigned-head{
+  padding-bottom:5px !important;
+  margin-bottom:6px !important;
+}
+#summaryPage .unsigned-head h2{
+  font-size:16px !important;
+}
+#summaryPage .unsigned-head p{
+  display:none !important;
+}
+#summaryPage #unsignedList{
+  max-height:190px !important;
+  overflow:auto !important;
+}
+#summaryPage #unsignedList .file-item{
+  padding:7px 9px !important;
+  border-radius:12px !important;
+  margin-bottom:6px !important;
+}
+@media(min-width:1280px){
+  #summaryPage .zone-overview-cards{grid-template-columns:repeat(7,minmax(116px,1fr)) !important;}
+  #summaryPage .zone-mini-card{min-height:78px !important;}
+  #summaryPage .compact-zone-table-wrap{max-height:220px !important;}
+}
+@media(max-width:980px){
+  #summaryPage .summary-hero{grid-template-columns:1fr !important;}
+  #summaryPage .summary-cards{grid-template-columns:1fr !important;}
+  #summaryPage .zone-overview-cards{grid-template-columns:repeat(3,minmax(0,1fr)) !important;}
+}
+@media(max-width:640px){
+  #summaryPage .zone-overview-cards{grid-template-columns:repeat(2,minmax(0,1fr)) !important;}
+  #summaryPage .zone-header{align-items:flex-start !important;flex-direction:column !important;}
+}
