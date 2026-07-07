@@ -10,13 +10,22 @@ let currentPage = 1;
 let totalPages = 0;
 let signaturePad;
 let pdfFiles = [];
+let documentStatus = new Map();
+let activeFilter = "all";
 
 const els = {
   loginBtn: document.getElementById("loginBtn"),
+  logoutBtn: document.getElementById("logoutBtn"),
   loadPdfBtn: document.getElementById("loadPdfBtn"),
   status: document.getElementById("status"),
   fileList: document.getElementById("fileList"),
   fileSearchInput: document.getElementById("fileSearchInput"),
+  filterAllBtn: document.getElementById("filterAllBtn"),
+  filterSignedBtn: document.getElementById("filterSignedBtn"),
+  filterPendingBtn: document.getElementById("filterPendingBtn"),
+  totalOriginalCount: document.getElementById("totalOriginalCount"),
+  signedCount: document.getElementById("signedCount"),
+  pendingCount: document.getElementById("pendingCount"),
   pdfCanvas: document.getElementById("pdfCanvas"),
   signatureCanvas: document.getElementById("signatureCanvas"),
   prevPageBtn: document.getElementById("prevPageBtn"),
@@ -42,9 +51,8 @@ window.addEventListener("load", () => {
         return;
       }
       accessToken = response.access_token;
-      els.loadPdfBtn.disabled = false;
-      els.loginBtn.textContent = "เข้าสู่ระบบแล้ว";
-      setStatus("พร้อมดึงไฟล์ PDF จาก Google Drive");
+      setLoggedInState();
+      setStatus("เข้าสู่ระบบสำเร็จ พร้อมดึงไฟล์ PDF จาก Google Drive");
     }
   });
 });
@@ -54,9 +62,13 @@ window.addEventListener("resize", resizeSignatureCanvas);
 els.loginBtn.addEventListener("click", () => {
   tokenClient.requestAccessToken({ prompt: accessToken ? "" : "consent" });
 });
+els.logoutBtn.addEventListener("click", logout);
 
 els.loadPdfBtn.addEventListener("click", loadPdfFiles);
 els.fileSearchInput.addEventListener("input", renderFileList);
+els.filterAllBtn.addEventListener("click", () => setFilter("all"));
+els.filterSignedBtn.addEventListener("click", () => setFilter("signed"));
+els.filterPendingBtn.addEventListener("click", () => setFilter("pending"));
 els.prevPageBtn.addEventListener("click", () => changePage(-1));
 els.nextPageBtn.addEventListener("click", () => changePage(1));
 els.clearSignatureBtn.addEventListener("click", () => signaturePad.clear());
@@ -64,6 +76,54 @@ els.savePdfBtn.addEventListener("click", saveSignedPdf);
 
 function setStatus(message) {
   els.status.textContent = message;
+}
+
+function setLoggedInState() {
+  els.loginBtn.textContent = "เข้าสู่ระบบแล้ว";
+  els.loginBtn.disabled = true;
+  els.logoutBtn.disabled = false;
+  els.loadPdfBtn.disabled = false;
+}
+
+function setLoggedOutState() {
+  accessToken = null;
+  currentPdfBlob = null;
+  currentPdfName = "";
+  currentPdfId = "";
+  pdfDocument = null;
+  currentPage = 1;
+  totalPages = 0;
+  pdfFiles = [];
+  documentStatus = new Map();
+  activeFilter = "all";
+
+  els.loginBtn.textContent = "เข้าสู่ระบบ";
+  els.loginBtn.disabled = false;
+  els.logoutBtn.disabled = true;
+  els.loadPdfBtn.disabled = true;
+  els.fileSearchInput.disabled = true;
+  els.fileSearchInput.value = "";
+  els.fileList.innerHTML = "";
+  setSummaryCounts(0, 0, 0);
+  setFilterButtonsDisabled(true);
+  setFilter("all", false);
+  els.prevPageBtn.disabled = true;
+  els.nextPageBtn.disabled = true;
+  els.clearSignatureBtn.disabled = true;
+  els.savePdfBtn.disabled = true;
+  els.pageInfo.textContent = "หน้า - / -";
+
+  const pdfCtx = els.pdfCanvas.getContext("2d");
+  pdfCtx.clearRect(0, 0, els.pdfCanvas.width, els.pdfCanvas.height);
+  if (signaturePad) signaturePad.clear();
+}
+
+function logout() {
+  if (accessToken && google?.accounts?.oauth2?.revoke) {
+    google.accounts.oauth2.revoke(accessToken, () => {});
+  }
+  setLoggedOutState();
+  setStatus("ออกจากระบบแล้ว");
 }
 
 function resizeSignatureCanvas() {
@@ -97,24 +157,78 @@ async function loadPdfFiles() {
   }
 
   pdfFiles = data.files;
+  buildDocumentStatus();
   els.fileSearchInput.disabled = false;
+  setFilterButtonsDisabled(false);
   els.fileSearchInput.value = "";
-  renderFileList();
-  setStatus(`พบไฟล์ PDF ${data.files.length} ไฟล์`);
+  setFilter("all");
+}
+
+function normalizeBaseName(fileName) {
+  return fileName.replace(/_signed\.pdf$/i, "").replace(/\.pdf$/i, "").trim().toLowerCase();
+}
+
+function isSignedFile(fileName) {
+  return /_signed\.pdf$/i.test(fileName);
+}
+
+function buildDocumentStatus() {
+  const signedBases = new Set(
+    pdfFiles.filter((file) => isSignedFile(file.name)).map((file) => normalizeBaseName(file.name))
+  );
+  const originalFiles = pdfFiles.filter((file) => !isSignedFile(file.name));
+
+  documentStatus = new Map();
+  originalFiles.forEach((file) => {
+    documentStatus.set(file.id, {
+      isOriginal: true,
+      isSigned: signedBases.has(normalizeBaseName(file.name))
+    });
+  });
+
+  const signedCount = originalFiles.filter((file) => documentStatus.get(file.id)?.isSigned).length;
+  const pendingCount = Math.max(originalFiles.length - signedCount, 0);
+  setSummaryCounts(originalFiles.length, signedCount, pendingCount);
+}
+
+function setSummaryCounts(total, signed, pending) {
+  els.totalOriginalCount.textContent = total.toLocaleString("th-TH");
+  els.signedCount.textContent = signed.toLocaleString("th-TH");
+  els.pendingCount.textContent = pending.toLocaleString("th-TH");
+}
+
+function setFilterButtonsDisabled(disabled) {
+  [els.filterAllBtn, els.filterSignedBtn, els.filterPendingBtn].forEach((btn) => {
+    btn.disabled = disabled;
+  });
+}
+
+function setFilter(filter, shouldRender = true) {
+  activeFilter = filter;
+  const buttons = { all: els.filterAllBtn, signed: els.filterSignedBtn, pending: els.filterPendingBtn };
+  Object.entries(buttons).forEach(([key, btn]) => btn.classList.toggle("active", key === filter));
+  if (shouldRender) renderFileList();
 }
 
 function renderFileList() {
   const keyword = (els.fileSearchInput.value || "").trim().toLowerCase();
-  const filteredFiles = pdfFiles.filter((file) =>
-    file.name.toLowerCase().includes(keyword)
-  );
+  const originalFiles = pdfFiles.filter((file) => !isSignedFile(file.name));
+  const filteredFiles = originalFiles.filter((file) => {
+    const status = documentStatus.get(file.id);
+    const matchKeyword = file.name.toLowerCase().includes(keyword);
+    const matchFilter =
+      activeFilter === "all" ||
+      (activeFilter === "signed" && status?.isSigned) ||
+      (activeFilter === "pending" && !status?.isSigned);
+    return matchKeyword && matchFilter;
+  });
 
   els.fileList.innerHTML = "";
 
   if (filteredFiles.length === 0) {
     const empty = document.createElement("div");
     empty.className = "empty-result";
-    empty.textContent = "ไม่พบไฟล์ PDF ที่ค้นหา";
+    empty.textContent = "ไม่พบไฟล์ PDF ตามเงื่อนไขที่เลือก";
     els.fileList.appendChild(empty);
     setStatus(keyword ? `ไม่พบไฟล์ที่มีคำว่า “${els.fileSearchInput.value}”` : "ไม่พบไฟล์ PDF");
     return;
@@ -124,12 +238,14 @@ function renderFileList() {
     const btn = document.createElement("button");
     btn.className = "file-item";
     if (file.id === currentPdfId) btn.classList.add("active");
-    btn.textContent = file.name;
+    const status = documentStatus.get(file.id);
+    btn.innerHTML = `<span>${file.name}</span><small class="file-status ${status?.isSigned ? "is-signed" : "is-pending"}">${status?.isSigned ? "เซ็นแล้ว" : "ยังไม่เซ็น"}</small>`;
     btn.onclick = () => openPdf(file, btn);
     els.fileList.appendChild(btn);
   });
 
-  setStatus(keyword ? `พบไฟล์ที่ตรงกับการค้นหา ${filteredFiles.length} ไฟล์` : `พบไฟล์ PDF ${pdfFiles.length} ไฟล์`);
+  const filterText = activeFilter === "signed" ? "เซ็นแล้ว" : activeFilter === "pending" ? "ยังไม่เซ็น" : "ทั้งหมด";
+  setStatus(keyword ? `พบไฟล์ ${filterText} ที่ตรงกับการค้นหา ${filteredFiles.length} ไฟล์` : `แสดงรายการ ${filterText} ${filteredFiles.length} ไฟล์`);
 }
 
 async function openPdf(file, button) {

@@ -17,6 +17,7 @@ body {
 }
 .app-header h1 { margin: 0; font-size: 32px; line-height: 1; }
 .app-header h2 { margin: 6px 0 0; font-size: 16px; font-weight: 500; opacity: .95; }
+.auth-actions { display: flex; gap: 10px; flex-wrap: wrap; }
 .layout { display: grid; grid-template-columns: 300px 1fr; min-height: calc(100vh - 92px); }
 .sidebar { background: #ffffff; border-right: 1px solid #dce5ef; padding: 16px; overflow-y: auto; }
 .workspace { padding: 16px; min-width: 0; }
@@ -31,6 +32,7 @@ button {
 }
 button:disabled { opacity: .45; cursor: not-allowed; }
 .primary-btn { background: #ffffff; color: #0b5b82; }
+.secondary-btn { background: rgba(255,255,255,.18); color: #ffffff; border: 1px solid rgba(255,255,255,.55); }
 .toolbar .primary-btn { background: #0b6f8a; color: #ffffff; }
 .menu-btn { width: 100%; background: #0b6f8a; color: white; margin-bottom: 12px; }
 .status { font-size: 13px; padding: 10px; background: #eef5fb; border-radius: 12px; margin-bottom: 12px; }
@@ -105,4 +107,73 @@ button:disabled { opacity: .45; cursor: not-allowed; }
   .layout { grid-template-columns: 1fr; }
   .sidebar { border-right: 0; border-bottom: 1px solid #dce5ef; }
   .app-header { align-items: flex-start; flex-direction: column; }
+}
+
+.summary-panel {
+  margin: 12px 0;
+  padding: 12px;
+  border: 1px solid #dbe6f0;
+  border-radius: 16px;
+  background: #f8fbff;
+}
+.summary-title {
+  font-weight: 800;
+  margin-bottom: 10px;
+  color: #18324a;
+}
+.summary-grid {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 8px;
+}
+.summary-card {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 10px;
+  border-radius: 12px;
+  background: #ffffff;
+  border: 1px solid #dbe6f0;
+}
+.summary-label { font-size: 13px; color: #596a7d; font-weight: 700; }
+.summary-card strong { font-size: 22px; color: #18324a; }
+.summary-card.signed strong { color: #0a7f74; }
+.summary-card.pending strong { color: #c46a00; }
+.filter-tabs {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 6px;
+  margin-bottom: 12px;
+}
+.filter-tab {
+  padding: 9px 8px;
+  border-radius: 999px;
+  font-size: 12px;
+  background: #edf3f9;
+  color: #18324a;
+}
+.filter-tab.active {
+  background: #0b6f8a;
+  color: #ffffff;
+}
+.file-item {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.file-status {
+  width: fit-content;
+  padding: 3px 8px;
+  border-radius: 999px;
+  font-size: 11px;
+  font-weight: 800;
+}
+.file-status.is-signed {
+  background: #dff3ef;
+  color: #0a7f74;
+}
+.file-status.is-pending {
+  background: #fff1dc;
+  color: #a85d00;
 }

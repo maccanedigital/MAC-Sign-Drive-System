@@ -16,13 +16,40 @@
       <h1>CaneNext</h1>
       <h2>Online Signature System</h2>
     </div>
-    <button id="loginBtn" class="primary-btn">เข้าสู่ระบบ Google</button>
+    <div class="auth-actions">
+      <button id="loginBtn" class="primary-btn">เข้าสู่ระบบ</button>
+      <button id="logoutBtn" class="secondary-btn" disabled>ออกจากระบบ</button>
+    </div>
   </header>
 
   <main class="layout">
     <aside class="sidebar">
       <button id="loadPdfBtn" class="menu-btn" disabled>ดึงไฟล์ PDF</button>
       <div id="status" class="status">กรุณาเข้าสู่ระบบ Google</div>
+      <section class="summary-panel" aria-label="สรุปสถานะเอกสาร">
+        <div class="summary-title">สรุปสถานะเอกสาร</div>
+        <div class="summary-grid">
+          <div class="summary-card">
+            <span class="summary-label">ไฟล์ต้นฉบับ</span>
+            <strong id="totalOriginalCount">0</strong>
+          </div>
+          <div class="summary-card signed">
+            <span class="summary-label">เซ็นแล้ว</span>
+            <strong id="signedCount">0</strong>
+          </div>
+          <div class="summary-card pending">
+            <span class="summary-label">คงเหลือ</span>
+            <strong id="pendingCount">0</strong>
+          </div>
+        </div>
+      </section>
+
+      <div class="filter-tabs" role="tablist" aria-label="กรองสถานะเอกสาร">
+        <button id="filterAllBtn" class="filter-tab active" disabled>ทั้งหมด</button>
+        <button id="filterSignedBtn" class="filter-tab" disabled>เซ็นแล้ว</button>
+        <button id="filterPendingBtn" class="filter-tab" disabled>ยังไม่เซ็น</button>
+      </div>
+
       <input id="fileSearchInput" class="file-search" type="search" placeholder="ค้นหาชื่อไฟล์ PDF..." disabled />
       <div id="fileList" class="file-list"></div>
     </aside>
