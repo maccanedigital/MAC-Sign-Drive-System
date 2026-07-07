@@ -802,3 +802,13 @@ body:before{
   #summaryPage .zone-tools{justify-content:flex-start !important;width:100% !important;}
   #summaryPage .zone-tools select{flex:1 !important;min-width:120px !important;}
 }
+
+/* FIX: show summary table (previous card-dashboard CSS hid .zone-table-wrap) */
+#summaryPage .zone-table-wrap,
+#summaryPage .compact-zone-table-wrap{
+  display:block !important;
+}
+#summaryPage .zone-table-wrap table,
+#summaryPage .compact-zone-table-wrap table{
+  display:table !important;
+}
