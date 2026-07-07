@@ -37,6 +37,7 @@ window.addEventListener("load", () => {
   loadGapi();
   waitForGIS();
   setButtons(false);
+  renderDefaultSummaryTableIfEmpty();
 });
 
 function bindEvents(){
@@ -453,6 +454,8 @@ function getSubZoneCode(filename){
 
 function updateZoneSummary(originals){
   if(!els.zoneSummaryBody) return;
+  const _wrap = els.zoneSummaryBody.closest(".summary-table-safe, .zone-table-wrap, .compact-zone-table-wrap");
+  if(_wrap){ _wrap.style.display = "block"; _wrap.style.visibility = "visible"; _wrap.style.opacity = "1"; }
   const selectedZone = els.zoneFilter ? els.zoneFilter.value : "all";
   const selectedSubZone = els.subZoneFilter ? els.subZoneFilter.value : "all";
   const titleEl = document.getElementById("summaryTableTitle");
@@ -566,6 +569,30 @@ function filterBySubZone(subZone){
   updateSummary();
   toast(subZone === "all" ? "แสดงเอกสารทุกเขตย่อย" : `แสดงเอกสารเขตย่อย ${subZone}`);
 }
+
+function renderDefaultSummaryTableIfEmpty(){
+  const body = document.getElementById("zoneSummaryBody");
+  if(!body) return;
+  const wrap = body.closest(".summary-table-safe, .zone-table-wrap, .compact-zone-table-wrap");
+  if(wrap){
+    wrap.style.display = "block";
+    wrap.style.visibility = "visible";
+    wrap.style.opacity = "1";
+  }
+  const hasRealRows = Array.from(body.querySelectorAll("tr")).some(tr => !tr.querySelector(".empty-cell"));
+  if(hasRealRows) return;
+  const zones = Array.from({length:12}, (_, i) => String(i + 1).padStart(2, "0"));
+  body.innerHTML = zones.map(zone => renderSummaryRow({
+    key: zone,
+    label: `เขต ${zone}`,
+    data: { total:0, signed:0, unsigned:0 },
+    onClickAttr: `data-zone="${zone}"`,
+    buttonClass: "zone-link",
+    avatarClass: "zone-avatar"
+  })).join("");
+  body.querySelectorAll(".zone-link").forEach(btn => btn.addEventListener("click", () => filterByZone(btn.dataset.zone)));
+}
+
 async function openFile(file, options = {}){
   const mode = options.mode || (file.hasSignedCopy ? "view-signed" : "sign");
   currentFile = file;

@@ -812,3 +812,30 @@ body:before{
 #summaryPage .compact-zone-table-wrap table{
   display:table !important;
 }
+
+
+/* FINAL FIX: force summary table visible and compact */
+#summaryPage .summary-table-safe{
+  display:block !important;
+  visibility:visible !important;
+  opacity:1 !important;
+  width:100% !important;
+  min-height:320px !important;
+  border:1px solid var(--line) !important;
+  border-radius:14px !important;
+  overflow:visible !important;
+  background:#fff !important;
+}
+#summaryPage .summary-table-safe table{
+  display:table !important;
+  visibility:visible !important;
+  opacity:1 !important;
+  width:100% !important;
+  table-layout:fixed !important;
+}
+#summaryPage .summary-table-safe thead{display:table-header-group !important;}
+#summaryPage .summary-table-safe tbody{display:table-row-group !important;}
+#summaryPage .summary-table-safe tr{display:table-row !important;}
+#summaryPage .summary-table-safe th,
+#summaryPage .summary-table-safe td{display:table-cell !important;}
+#summaryPage .summary-table-safe .empty-cell{display:table-cell !important;}
