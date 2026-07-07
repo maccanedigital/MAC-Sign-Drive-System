@@ -3,174 +3,50 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>PDF Sign & Drive System</title>
+  <title>CaneNext | Online Signature System</title>
+  <link rel="stylesheet" href="style.css" />
   <script src="https://accounts.google.com/gsi/client" async defer></script>
-  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-  <script src="https://cdn.jsdelivr.net/npm/pdf-lib/dist/pdf-lib.min.js"></script>
-  <style>
-    :root{--bg:#f3f7fb;--card:#fff;--text:#14334a;--muted:#6c7f90;--primary:#0b63a5;--primary2:#074a7c;--accent:#12a37f;--warn:#f39c12;--danger:#c0392b;--border:#dce8f0;--soft:#eaf4fb;--shadow:0 12px 30px rgba(20,51,74,.10)}
-    *{box-sizing:border-box} body{margin:0;font-family:"Segoe UI",Tahoma,Arial,sans-serif;background:linear-gradient(135deg,#eef8fb,#f9fbff);color:var(--text)}
-    header{background:linear-gradient(120deg,var(--primary2),var(--primary));color:#fff;padding:22px 28px;box-shadow:var(--shadow)}
-    .header-row{display:flex;justify-content:space-between;align-items:center;gap:16px;flex-wrap:wrap}.title h1{margin:0;font-size:27px}.title p{margin:6px 0 0;color:#dcefff}.badge{border:1px solid rgba(255,255,255,.25);background:rgba(255,255,255,.15);padding:10px 14px;border-radius:999px;font-size:13px;font-weight:800}
-    .layout{display:grid;grid-template-columns:265px 1fr;gap:22px;max-width:1480px;margin:0 auto;padding:22px}aside{background:#fff;border:1px solid var(--border);border-radius:20px;padding:14px;height:max-content;position:sticky;top:16px;box-shadow:var(--shadow)}
-    .nav-btn{width:100%;border:0;background:transparent;padding:13px 14px;border-radius:14px;text-align:left;font-weight:800;color:var(--text);cursor:pointer;margin-bottom:6px;font-size:15px}.nav-btn:hover,.nav-btn.active{background:var(--soft);color:var(--primary2)}
-    main{min-width:0}.page{display:none}.page.active{display:block}.grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:16px}.grid.two{grid-template-columns:repeat(2,minmax(0,1fr))}.grid.four{grid-template-columns:repeat(4,minmax(0,1fr))}
-    .card{background:#fff;border:1px solid var(--border);border-radius:22px;padding:20px;box-shadow:var(--shadow);margin-bottom:18px}.card.warn{background:#fffaf0;border-color:#f1d495}.stat{display:flex;align-items:center;justify-content:space-between}.stat .num{font-size:34px;font-weight:900;color:var(--primary2)}.label{font-weight:800;color:var(--muted)}
-    h2{margin:0 0 14px;font-size:22px}h3{margin:0 0 12px;font-size:17px}.muted{color:var(--muted)}.small{font-size:12px}.pill{display:inline-block;padding:6px 10px;border-radius:999px;background:var(--soft);font-weight:800;font-size:12px;color:var(--primary2)}
-    label{display:block;margin:12px 0 6px;font-size:13px;font-weight:800}input,select,textarea{width:100%;padding:12px 13px;border:1px solid var(--border);border-radius:13px;background:#fff;color:var(--text);font-size:15px}textarea{min-height:90px;resize:vertical}.actions{display:flex;gap:10px;flex-wrap:wrap;margin-top:14px}
-    button{border:0;border-radius:13px;padding:11px 16px;font-weight:900;cursor:pointer;font-size:14px}.btn{background:var(--primary);color:#fff}.btn:hover{background:var(--primary2)}.btn.secondary{background:#e8f1f7;color:var(--primary2)}.btn.green{background:var(--accent);color:#fff}.btn.warn{background:#fff1d9;color:#9a6400}.btn.danger{background:#fdecea;color:var(--danger)}.btn:disabled{opacity:.55;cursor:not-allowed}
-    table{width:100%;border-collapse:collapse;background:#fff;border-radius:16px;overflow:hidden}th,td{padding:12px;border-bottom:1px solid var(--border);text-align:left;font-size:14px;vertical-align:top}th{background:#eef6fb;color:#244b63}tr:hover td{background:#fbfdff}.status{font-weight:900;border-radius:999px;padding:5px 9px;font-size:12px;white-space:nowrap}.Pending{background:#fff4df;color:#9a6400}.Signed{background:#e5f7f0;color:#087a56}.Draft{background:#edf2ff;color:#3453a4}.Error{background:#fdecea;color:#c0392b}
-    .drop{border:2px dashed #a9c9df;background:#f7fbfe;border-radius:20px;padding:24px;text-align:center}.preview{height:560px;border:1px solid var(--border);border-radius:18px;background:#f7fbfe;display:flex;align-items:center;justify-content:center;overflow:hidden;position:relative}.preview iframe{width:100%;height:100%;border:0}.sign-canvas{width:100%;height:200px;border:2px dashed #b7cdda;border-radius:16px;background:white;touch-action:none}.code{font-family:Consolas,monospace;background:#eef3f7;border-radius:8px;padding:2px 6px}.toast{position:fixed;right:20px;bottom:20px;background:#12324a;color:#fff;padding:13px 16px;border-radius:14px;box-shadow:var(--shadow);display:none;z-index:10;max-width:420px}.toast.show{display:block}.hidden{display:none!important}.mono{font-family:Consolas,monospace;white-space:pre-wrap;background:#f4f8fb;border:1px solid var(--border);border-radius:14px;padding:14px;overflow:auto}.table-wrap{overflow:auto}.right{text-align:right}
-    @media(max-width:1000px){.layout{grid-template-columns:1fr;padding:14px}aside{position:relative;top:0}.grid,.grid.two,.grid.four{grid-template-columns:1fr}.preview{height:420px}header{padding:18px}}
-  </style>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/pdf-lib@1.17.1/dist/pdf-lib.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/signature_pad@4.1.6/dist/signature_pad.umd.min.js"></script>
 </head>
 <body>
-<header><div class="header-row"><div class="title"><h1>PDF Sign & Drive System</h1><p>ระบบจัดการเอกสาร PDF สำหรับใช้งานจริง: Upload → Google Drive → ค้นหา → เปิดบนแท็บเล็ต → เซ็น → Update ไฟล์เดิม</p></div><div class="badge" id="modeBadge">ยังไม่เชื่อมต่อ</div></div></header>
-<div class="layout">
-  <aside>
-    <button class="nav-btn active" onclick="showPage('dashboard',this)">Dashboard</button>
-    <button class="nav-btn" onclick="showPage('upload',this)">อัปโหลด PDF</button>
-    <button class="nav-btn" onclick="showPage('search',this)">ค้นหาเอกสาร</button>
-    <button class="nav-btn" onclick="showPage('sign',this)">เปิดและเซ็นเอกสาร</button>
-    <button class="nav-btn" onclick="showPage('history',this)">ประวัติเอกสาร</button>
-    <button class="nav-btn" onclick="showPage('settings',this)">ตั้งค่าระบบ</button>
-  </aside>
-  <main>
-    <section id="dashboard" class="page active">
-      <div class="grid four">
-        <div class="card stat"><div><div class="label">เอกสารทั้งหมด</div><div class="num" id="totalDocs">0</div></div><span class="pill">Total</span></div>
-        <div class="card stat"><div><div class="label">รอเซ็น</div><div class="num" id="pendingDocs">0</div></div><span class="pill">Pending</span></div>
-        <div class="card stat"><div><div class="label">เซ็นแล้ว</div><div class="num" id="signedDocs">0</div></div><span class="pill">Signed</span></div>
-        <div class="card stat"><div><div class="label">สถานะระบบ</div><div class="num" style="font-size:20px" id="systemStatus">Local</div></div><span class="pill">Mode</span></div>
+  <header class="app-header">
+    <div>
+      <h1>CaneNext</h1>
+      <h2>Online Signature System</h2>
+    </div>
+    <button id="loginBtn" class="primary-btn">เข้าสู่ระบบ Google</button>
+  </header>
+
+  <main class="layout">
+    <aside class="sidebar">
+      <button id="loadPdfBtn" class="menu-btn" disabled>ดึงไฟล์ PDF</button>
+      <div id="status" class="status">กรุณาเข้าสู่ระบบ Google</div>
+      <div id="fileList" class="file-list"></div>
+    </aside>
+
+    <section class="workspace">
+      <div class="toolbar">
+        <button id="prevPageBtn" disabled>หน้าก่อนหน้า</button>
+        <span id="pageInfo">หน้า - / -</span>
+        <button id="nextPageBtn" disabled>หน้าถัดไป</button>
+        <button id="clearSignatureBtn" disabled>ล้างลายเซ็น</button>
+        <button id="savePdfBtn" class="primary-btn" disabled>บันทึก PDF</button>
       </div>
-      <div class="card"><h2>เอกสารล่าสุด</h2><div class="table-wrap"><table><thead><tr><th>วันที่</th><th>รหัส</th><th>ชื่อชาวไร่</th><th>ประเภท</th><th>ไฟล์</th><th>สถานะ</th><th>ดำเนินการ</th></tr></thead><tbody id="latestRows"></tbody></table></div></div>
-    </section>
-    <section id="upload" class="page">
-      <div class="card"><h2>อัปโหลดเอกสาร PDF</h2><div class="grid two"><div>
-        <label>รหัสชาวไร่</label><input id="farmerCode" placeholder="เช่น 778899" />
-        <label>ชื่อชาวไร่</label><input id="farmerName" placeholder="เช่น นายอ้อยดี มีกำไร" />
-        <label>ประเภทเอกสาร</label><select id="docType"><option>รายงานวิเคราะห์</option><option>สัญญา</option><option>แบบสำรวจ</option><option>หนังสือรับรอง</option><option>เอกสารอื่น ๆ</option></select>
-        <label>ปีการผลิต</label><input id="cropYear" placeholder="เช่น 2569/70" />
-        <label>หมายเหตุ</label><textarea id="note" placeholder="รายละเอียดเพิ่มเติม"></textarea>
-      </div><div>
-        <label>เลือกไฟล์ PDF</label><div class="drop"><input type="file" id="pdfFile" accept="application/pdf" /><p class="muted small">เมื่อเชื่อมต่อแล้ว ระบบจะอัปโหลดเข้า Google Drive และบันทึกข้อมูลใน Supabase อัตโนมัติ</p></div>
-        <div class="actions"><button class="btn" onclick="uploadDocument()">Upload ไป Google Drive</button><button class="btn secondary" onclick="clearUploadForm()">ล้างข้อมูล</button></div>
-      </div></div></div>
-    </section>
-    <section id="search" class="page">
-      <div class="card"><h2>ค้นหาเอกสาร</h2><div class="grid two"><div><label>คำค้นหา</label><input id="searchText" placeholder="ชื่อชาวไร่ / รหัส / ประเภท / ชื่อไฟล์" oninput="renderSearch()" /></div><div><label>สถานะ</label><select id="statusFilter" onchange="renderSearch()"><option value="">ทั้งหมด</option><option value="Pending">Pending</option><option value="Signed">Signed</option><option value="Draft">Draft</option></select></div></div></div>
-      <div class="card"><div class="table-wrap"><table><thead><tr><th>วันที่</th><th>รหัส</th><th>ชื่อชาวไร่</th><th>ประเภท</th><th>ไฟล์</th><th>สถานะ</th><th>ดำเนินการ</th></tr></thead><tbody id="searchRows"></tbody></table></div></div>
-    </section>
-    <section id="sign" class="page">
-      <div class="card"><h2>เปิดและเซ็นเอกสาร</h2><p class="muted">เลือกเอกสาร จากนั้นดาวน์โหลด PDF จาก Google Drive เพื่อแสดงตัวอย่างและฝังลายเซ็น</p><select id="signSelect" onchange="loadSignDoc()"></select><div class="actions"><button class="btn secondary" onclick="loadSignDoc(true)">โหลด PDF จาก Drive</button><button class="btn secondary" onclick="openDriveLink()">เปิดใน Google Drive</button></div></div>
-      <div class="grid two"><div class="card"><h3>ตัวอย่างเอกสาร</h3><div class="preview" id="pdfPreview"><span class="muted">ยังไม่ได้เลือกเอกสาร</span></div></div><div class="card"><h3>ลายเซ็นบนแท็บเล็ต</h3><canvas id="signatureCanvas" class="sign-canvas"></canvas><label>ตำแหน่งลายเซ็น</label><select id="signaturePosition"><option value="bottom-right">ล่างขวา</option><option value="bottom-center">ล่างกลาง</option><option value="bottom-left">ล่างซ้าย</option></select><div class="actions"><button class="btn secondary" onclick="clearSignature()">ล้างลายเซ็น</button><button class="btn green" onclick="saveSignedPdfToDrive()">ฝังลายเซ็นและ Update ไฟล์เดิม</button></div><p class="muted small">ระบบจะอัปเดตสถานะเป็น Signed หลังอัปโหลดทับไฟล์ PDF เดิมสำเร็จ</p></div></div>
-    </section>
-    <section id="history" class="page"><div class="card"><h2>ประวัติเอกสาร</h2><div class="table-wrap"><table><thead><tr><th>เวลา</th><th>เหตุการณ์</th><th>ไฟล์</th><th>ผู้ใช้งาน</th><th>รายละเอียด</th></tr></thead><tbody id="historyRows"></tbody></table></div></div></section>
-    <section id="settings" class="page">
-      <div class="card warn"><h2>ตั้งค่าการเชื่อมต่อใช้งานจริง</h2><p class="muted">กรอกข้อมูลจาก Google Cloud และ Supabase แล้วกดบันทึก จากนั้นกดเชื่อมต่อ Google ใช้ได้กับ GitHub Pages, Cloudflare Pages, Netlify หรือ Vercel</p><div class="grid two"><div>
-        <label>Google OAuth Client ID</label><input id="googleClientId" placeholder="xxxx.apps.googleusercontent.com" />
-        <label>Google Drive Folder ID</label><input id="driveFolderId" placeholder="Folder ID สำหรับเก็บ PDF" />
-        <label>Supabase URL</label><input id="supabaseUrl" placeholder="https://xxxxx.supabase.co" />
-        <label>Supabase anon public key</label><textarea id="supabaseAnonKey" placeholder="eyJ..." style="min-height:120px"></textarea>
-      </div><div>
-        <label>สถานะ Google</label><input id="googleStatus" readonly value="ยังไม่เชื่อมต่อ" />
-        <label>สถานะ Supabase</label><input id="supabaseStatus" readonly value="ยังไม่เชื่อมต่อ" />
-        <div class="actions"><button class="btn" onclick="saveSettings()">บันทึกการตั้งค่า</button><button class="btn green" onclick="connectGoogle()">เชื่อมต่อ Google</button><button class="btn secondary" onclick="testSupabase()">ทดสอบ Supabase</button><button class="btn danger" onclick="resetAll()">ล้างข้อมูลเครื่องนี้</button></div>
-        <p class="muted small">หมายเหตุ: Client-side app ใช้ Access Token แบบอายุสั้น หาก Token หมดอายุให้กดเชื่อมต่อ Google อีกครั้ง</p>
-      </div></div></div>
 
-      <div class="card"><h2>ขั้นตอนก่อนนำขึ้นเว็บ</h2><ol class="muted" style="line-height:1.9;margin-top:0"><li>เปลี่ยนชื่อไฟล์นี้เป็น <span class="code">index.html</span></li><li>นำไฟล์ขึ้น Hosting เช่น Cloudflare Pages / GitHub Pages / Netlify / Vercel</li><li>นำ URL เว็บจริงไปใส่ใน Google Cloud: Authorized JavaScript origins</li><li>สร้างโฟลเดอร์ใน Google Drive แล้วคัดลอก Folder ID มาใส่ในหน้านี้</li><li>สร้างตาราง Supabase ด้วย SQL ด้านล่าง แล้วนำ Supabase URL และ anon key มาใส่</li><li>กดบันทึกการตั้งค่า → เชื่อมต่อ Google → ทดสอบ Supabase → Upload PDF</li></ol><p class="muted small">หมายเหตุ: ห้ามใส่ Google Client Secret หรือ Supabase service_role key ในไฟล์หน้าเว็บเด็ดขาด ให้ใช้เฉพาะ OAuth Client ID และ anon/public key เท่านั้น</p></div>
-      <div class="card"><h2>SQL สำหรับสร้างตาราง Supabase</h2><pre class="mono">create extension if not exists pgcrypto;
+      <div class="pdf-wrap">
+        <canvas id="pdfCanvas"></canvas>
+      </div>
 
-create table if not exists public.documents (
-  id uuid primary key default gen_random_uuid(),
-  farmer_code text,
-  farmer_name text,
-  crop_year text,
-  document_type text,
-  file_name text not null,
-  drive_file_id text,
-  drive_link text,
-  status text default 'Pending',
-  note text,
-  uploaded_by text,
-  signed_by text,
-  created_at timestamptz default now(),
-  signed_at timestamptz
-);
-
-create table if not exists public.document_history (
-  id uuid primary key default gen_random_uuid(),
-  document_id uuid references public.documents(id) on delete cascade,
-  event_type text not null,
-  file_name text,
-  actor text,
-  detail text,
-  created_at timestamptz default now()
-);
-
-create index if not exists idx_documents_farmer_code on public.documents(farmer_code);
-create index if not exists idx_documents_farmer_name on public.documents(farmer_name);
-create index if not exists idx_documents_status on public.documents(status);
-
--- Quick Start: ใช้งานกับ Static Web App ได้ทันที
--- ข้อควรระวัง: ผู้ที่มี URL เว็บและ anon key สามารถอ่าน/เพิ่ม/แก้ข้อมูลได้
-alter table public.documents disable row level security;
-alter table public.document_history disable row level security;
-
--- เมื่อต้องการล็อกระบบจริงระดับองค์กร ควรเปิด RLS และทำ Supabase Auth/Edge Function เพิ่มเติมภายหลัง</pre></div>
+      <section class="signature-section">
+        <div class="signature-title">พื้นที่เซ็นชื่อ</div>
+        <canvas id="signatureCanvas"></canvas>
+      </section>
     </section>
   </main>
-</div><div id="toast" class="toast"></div>
-<script>
-const DRIVE_SCOPE = 'https://www.googleapis.com/auth/drive.file';
-// ใส่ค่าเริ่มต้นตรงนี้ได้ก่อนนำขึ้นเว็บ หรือปล่อยว่างแล้วกรอกในหน้า 'ตั้งค่าระบบ'
-const APP_DEFAULT_CONFIG = {
-  googleClientId: '',
-  driveFolderId: '',
-  supabaseUrl: '',
-  supabaseAnonKey: ''
-};
-const CONFIG_KEY='pdfsign_prod_config_v1', LOCAL_DOCS='pdfsign_prod_docs_v1', LOCAL_HISTORY='pdfsign_prod_history_v1';
-let CONFIG={}, tokenClient=null, accessToken='', sb=null, docs=[], histories=[], selectedDoc=null, currentPdfBytes=null, currentObjectUrl='';
-const $=id=>document.getElementById(id);
-function toast(msg){const el=$('toast'); el.textContent=msg; el.classList.add('show'); setTimeout(()=>el.classList.remove('show'),3500)}
-function showPage(id,btn){document.querySelectorAll('.page').forEach(p=>p.classList.remove('active'));$(id).classList.add('active');document.querySelectorAll('.nav-btn').forEach(b=>b.classList.remove('active')); if(btn)btn.classList.add('active'); if(id==='search')renderSearch(); if(id==='sign')renderSignSelect(); if(id==='history')renderHistory();}
-function loadConfig(){CONFIG={...APP_DEFAULT_CONFIG,...JSON.parse(localStorage.getItem(CONFIG_KEY)||'{}')}; ['googleClientId','driveFolderId','supabaseUrl','supabaseAnonKey'].forEach(k=>{if($(k))$(k).value=CONFIG[k]||''}); initSupabase(); updateStatus();}
-function saveSettings(){CONFIG={googleClientId:$('googleClientId').value.trim(),driveFolderId:$('driveFolderId').value.trim(),supabaseUrl:$('supabaseUrl').value.trim(),supabaseAnonKey:$('supabaseAnonKey').value.trim()}; localStorage.setItem(CONFIG_KEY,JSON.stringify(CONFIG)); initSupabase(); updateStatus(); toast('บันทึกการตั้งค่าแล้ว');}
-function initSupabase(){if(CONFIG.supabaseUrl&&CONFIG.supabaseAnonKey&&window.supabase){sb=window.supabase.createClient(CONFIG.supabaseUrl, CONFIG.supabaseAnonKey); $('supabaseStatus')&&($('supabaseStatus').value='พร้อมเชื่อมต่อ');}else{sb=null; $('supabaseStatus')&&($('supabaseStatus').value='ยังไม่เชื่อมต่อ');}}
-function updateStatus(){const googleReady=!!accessToken; const supaReady=!!sb; $('modeBadge').textContent = `${googleReady?'Google Connected':'Google Not Connected'} / ${supaReady?'Supabase Ready':'Local Fallback'}`; $('systemStatus').textContent = supaReady?'Supabase':'Local'; if($('googleStatus'))$('googleStatus').value=googleReady?'เชื่อมต่อแล้ว':'ยังไม่เชื่อมต่อ';}
-function connectGoogle(){saveSettings(); if(!CONFIG.googleClientId){toast('กรุณาใส่ Google OAuth Client ID');return;} if(!window.google?.accounts?.oauth2){toast('ยังโหลด Google Identity Services ไม่สำเร็จ');return;} tokenClient=google.accounts.oauth2.initTokenClient({client_id:CONFIG.googleClientId,scope:DRIVE_SCOPE,callback:(res)=>{if(res.error){toast('Google error: '+res.error);return;} accessToken=res.access_token; updateStatus(); toast('เชื่อมต่อ Google สำเร็จ');}}); tokenClient.requestAccessToken({prompt:'consent'});}
-async function ensureToken(){if(accessToken)return accessToken; connectGoogle(); throw new Error('กรุณากดเชื่อมต่อ Google และอนุญาตสิทธิ์ก่อนทำรายการ');}
-async function loadData(){if(sb){try{const {data,error}=await sb.from('documents').select('*').order('created_at',{ascending:false}); if(error)throw error; docs=data||[]; const hist=await sb.from('document_history').select('*').order('created_at',{ascending:false}).limit(100); histories=hist.data||[];}catch(e){toast('อ่าน Supabase ไม่สำเร็จ ใช้ Local แทน: '+e.message); loadLocal();}}else loadLocal(); renderAll();}
-function loadLocal(){docs=JSON.parse(localStorage.getItem(LOCAL_DOCS)||'[]'); histories=JSON.parse(localStorage.getItem(LOCAL_HISTORY)||'[]');}
-function saveLocal(){localStorage.setItem(LOCAL_DOCS,JSON.stringify(docs));localStorage.setItem(LOCAL_HISTORY,JSON.stringify(histories));}
-async function insertDoc(record){if(sb){const {data,error}=await sb.from('documents').insert(record).select().single(); if(error)throw error; docs.unshift(data); await addHistory(data.id,'Upload',data.file_name,'Uploaded to Google Drive'); return data;} record.id=crypto.randomUUID(); record.created_at=new Date().toISOString(); docs.unshift(record); saveLocal(); addHistory(record.id,'Upload',record.file_name,'Saved locally'); return record;}
-async function updateDoc(id,patch){if(sb){const {data,error}=await sb.from('documents').update(patch).eq('id',id).select().single(); if(error)throw error; docs=docs.map(d=>d.id===id?data:d); return data;} docs=docs.map(d=>d.id===id?{...d,...patch}:d); saveLocal(); return docs.find(d=>d.id===id);}
-async function addHistory(document_id,event_type,file_name,detail){const row={document_id,event_type,file_name,actor:'current user',detail,created_at:new Date().toISOString()}; if(sb){await sb.from('document_history').insert(row);} else {row.id=crypto.randomUUID();histories.unshift(row);saveLocal();} await loadData();}
-async function testSupabase(){saveSettings(); if(!sb){toast('กรุณาใส่ Supabase URL และ anon key');return;} const {error}=await sb.from('documents').select('id').limit(1); $('supabaseStatus').value=error?'เชื่อมต่อไม่สำเร็จ: '+error.message:'เชื่อมต่อสำเร็จ'; toast($('supabaseStatus').value);}
-async function uploadDocument(){try{const file=$('pdfFile').files[0]; if(!file){toast('กรุณาเลือกไฟล์ PDF');return;} if(!file.type.includes('pdf')){toast('รองรับเฉพาะ PDF');return;} const token=await ensureToken(); if(!CONFIG.driveFolderId){toast('กรุณาใส่ Google Drive Folder ID ในหน้าตั้งค่าระบบ');return;} const metadata={name:file.name,mimeType:'application/pdf',parents:[CONFIG.driveFolderId]}; const boundary='-------pdfsign'+Date.now(); const body=new Blob(['--'+boundary+'\r\n','Content-Type: application/json; charset=UTF-8\r\n\r\n',JSON.stringify(metadata),'\r\n--'+boundary+'\r\n','Content-Type: application/pdf\r\n\r\n',file,'\r\n--'+boundary+'--'],{type:'multipart/related; boundary='+boundary});
- const res=await fetch('https://www.googleapis.com/upload/drive/v3/files?uploadType=multipart&fields=id,name,webViewLink,webContentLink,createdTime',{method:'POST',headers:{Authorization:'Bearer '+token,'Content-Type':'multipart/related; boundary='+boundary},body}); if(!res.ok)throw new Error(await res.text()); const drive=await res.json(); const record={farmer_code:$('farmerCode').value.trim(),farmer_name:$('farmerName').value.trim(),crop_year:$('cropYear').value.trim(),document_type:$('docType').value,file_name:file.name,drive_file_id:drive.id,drive_link:drive.webViewLink,status:'Pending',note:$('note').value.trim(),uploaded_by:'Google user'}; await insertDoc(record); clearUploadForm(); toast('Upload สำเร็จและบันทึกข้อมูลแล้ว');}catch(e){toast(e.message)}}
-function clearUploadForm(){['farmerCode','farmerName','cropYear','note'].forEach(id=>$(id).value='');$('pdfFile').value='';}
-async function downloadDrivePdf(fileId){const token=await ensureToken(); const res=await fetch(`https://www.googleapis.com/drive/v3/files/${fileId}?alt=media`,{headers:{Authorization:'Bearer '+token}}); if(!res.ok)throw new Error(await res.text()); return await res.arrayBuffer();}
-async function updateDrivePdf(fileId,bytes){const token=await ensureToken(); const res=await fetch(`https://www.googleapis.com/upload/drive/v3/files/${fileId}?uploadType=media&fields=id,name,webViewLink,modifiedTime`,{method:'PATCH',headers:{Authorization:'Bearer '+token,'Content-Type':'application/pdf'},body:new Blob([bytes],{type:'application/pdf'})}); if(!res.ok)throw new Error(await res.text()); return await res.json();}
-function selectDoc(id){selectedDoc=docs.find(d=>d.id===id); showPage('sign',document.querySelectorAll('.nav-btn')[3]); renderSignSelect(); $('signSelect').value=id; loadSignDoc(true);}
-function renderSignSelect(){const sel=$('signSelect'); sel.innerHTML='<option value="">เลือกเอกสาร</option>'+docs.map(d=>`<option value="${d.id}">${esc(d.farmer_code||'-')} | ${esc(d.farmer_name||'-')} | ${esc(d.file_name)}</option>`).join(''); if(selectedDoc)sel.value=selectedDoc.id;}
-async function loadSignDoc(force=false){const id=$('signSelect').value; selectedDoc=docs.find(d=>d.id===id); currentPdfBytes=null; if(!selectedDoc){$('pdfPreview').innerHTML='<span class="muted">ยังไม่ได้เลือกเอกสาร</span>';return;} $('pdfPreview').innerHTML='<span class="muted">กำลังโหลด PDF...</span>'; try{if(force||selectedDoc.drive_file_id){currentPdfBytes=await downloadDrivePdf(selectedDoc.drive_file_id); if(currentObjectUrl)URL.revokeObjectURL(currentObjectUrl); currentObjectUrl=URL.createObjectURL(new Blob([currentPdfBytes],{type:'application/pdf'})); $('pdfPreview').innerHTML=`<iframe src="${currentObjectUrl}"></iframe>`; await addHistory(selectedDoc.id,'Open',selectedDoc.file_name,'Opened for signing');}}catch(e){$('pdfPreview').innerHTML='<span class="muted">โหลด PDF ไม่สำเร็จ กรุณาตรวจสิทธิ์ Google Drive</span>'; toast(e.message)}}
-function openDriveLink(){if(selectedDoc?.drive_link)window.open(selectedDoc.drive_link,'_blank'); else toast('ไม่มี Drive link');}
-async function saveSignedPdfToDrive(){try{if(!selectedDoc)throw new Error('กรุณาเลือกเอกสาร'); if(!currentPdfBytes)currentPdfBytes=await downloadDrivePdf(selectedDoc.drive_file_id); const dataUrl=$('signatureCanvas').toDataURL('image/png'); if(isCanvasBlank($('signatureCanvas')))throw new Error('กรุณาเซ็นชื่อก่อนบันทึก'); const {PDFDocument}=PDFLib; const pdf=await PDFDocument.load(currentPdfBytes); const sig=await pdf.embedPng(dataUrl); const page=pdf.getPages()[pdf.getPageCount()-1]; const {width}=page.getSize(); const sigW=160, sigH=sig.height*(sigW/sig.width); const pos=$('signaturePosition').value; let x=width-sigW-50; if(pos==='bottom-left')x=50; if(pos==='bottom-center')x=(width-sigW)/2; page.drawImage(sig,{x,y:55,width:sigW,height:sigH}); const bytes=await pdf.save(); const updated=await updateDrivePdf(selectedDoc.drive_file_id,bytes); const now=new Date().toISOString(); await updateDoc(selectedDoc.id,{status:'Signed',signed_at:now,signed_by:'Google user',drive_link:updated.webViewLink||selectedDoc.drive_link}); await addHistory(selectedDoc.id,'Signed',selectedDoc.file_name,'Signature embedded and Drive file updated'); clearSignature(); toast('บันทึกลายเซ็นและอัปเดตไฟล์เดิมสำเร็จ');}catch(e){toast(e.message)}}
-function isCanvasBlank(canvas){const blank=document.createElement('canvas');blank.width=canvas.width;blank.height=canvas.height;return canvas.toDataURL()===blank.toDataURL();}
-function setupCanvas(){const canvas=$('signatureCanvas'),ctx=canvas.getContext('2d');function resize(){const r=canvas.getBoundingClientRect();canvas.width=r.width*devicePixelRatio;canvas.height=r.height*devicePixelRatio;ctx.scale(devicePixelRatio,devicePixelRatio);ctx.lineWidth=2.5;ctx.lineCap='round';ctx.strokeStyle='#12324a';} resize(); window.addEventListener('resize',resize); let drawing=false; const p=e=>{const r=canvas.getBoundingClientRect(); const t=e.touches?e.touches[0]:e; return{x:t.clientX-r.left,y:t.clientY-r.top}}; const start=e=>{drawing=true; const a=p(e); ctx.beginPath();ctx.moveTo(a.x,a.y);e.preventDefault()}; const move=e=>{if(!drawing)return; const a=p(e);ctx.lineTo(a.x,a.y);ctx.stroke();e.preventDefault()}; const end=()=>drawing=false; canvas.addEventListener('mousedown',start);canvas.addEventListener('mousemove',move);window.addEventListener('mouseup',end);canvas.addEventListener('touchstart',start,{passive:false});canvas.addEventListener('touchmove',move,{passive:false});canvas.addEventListener('touchend',end);} 
-function clearSignature(){const c=$('signatureCanvas'); c.getContext('2d').clearRect(0,0,c.width,c.height)}
-function renderAll(){renderDashboard();renderSearch();renderSignSelect();renderHistory();updateStatus();}
-function renderDashboard(){const total=docs.length,pending=docs.filter(d=>d.status==='Pending').length,signed=docs.filter(d=>d.status==='Signed').length; $('totalDocs').textContent=total;$('pendingDocs').textContent=pending;$('signedDocs').textContent=signed;$('latestRows').innerHTML=docs.slice(0,10).map(rowHtml).join('')||emptyRow(7);}
-function renderSearch(){const q=($('searchText')?.value||'').toLowerCase(),s=$('statusFilter')?.value||''; const rows=docs.filter(d=>(!s||d.status===s)&&[d.farmer_code,d.farmer_name,d.document_type,d.file_name,d.crop_year].join(' ').toLowerCase().includes(q)); $('searchRows').innerHTML=rows.map(rowHtml).join('')||emptyRow(7);}
-function renderHistory(){$('historyRows').innerHTML=histories.map(h=>`<tr><td>${fmt(h.created_at)}</td><td>${esc(h.event_type)}</td><td>${esc(h.file_name||'')}</td><td>${esc(h.actor||'')}</td><td>${esc(h.detail||'')}</td></tr>`).join('')||emptyRow(5);}
-function rowHtml(d){return `<tr><td>${fmt(d.created_at)}</td><td>${esc(d.farmer_code||'-')}</td><td>${esc(d.farmer_name||'-')}</td><td>${esc(d.document_type||'-')}</td><td>${esc(d.file_name||'-')}</td><td><span class="status ${esc(d.status||'Draft')}">${esc(d.status||'Draft')}</span></td><td><button class="btn secondary" onclick="selectDoc('${d.id}')">เปิดเซ็น</button> ${d.drive_link?`<button class="btn secondary" onclick="window.open('${d.drive_link}','_blank')">Drive</button>`:''}</td></tr>`}
-function emptyRow(n){return `<tr><td colspan="${n}" class="muted">ยังไม่มีข้อมูล</td></tr>`}
-function fmt(v){return v?new Date(v).toLocaleString('th-TH',{dateStyle:'short',timeStyle:'short'}):'-'} function esc(v){return String(v??'').replace(/[&<>"]/g,s=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[s]))}
-function resetAll(){if(confirm('ล้างข้อมูล LocalStorage ในเครื่องนี้?')){localStorage.removeItem(LOCAL_DOCS);localStorage.removeItem(LOCAL_HISTORY);localStorage.removeItem(CONFIG_KEY);location.reload();}}
-window.addEventListener('load',()=>{loadConfig(); setupCanvas(); loadData();});
-</script>
+
+  <script src="config.js"></script>
+  <script src="app.js"></script>
 </body>
 </html>
